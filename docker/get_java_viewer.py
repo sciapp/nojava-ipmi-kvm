@@ -12,7 +12,9 @@ from future import standard_library
 standard_library.install_aliases()  # noqa: E402
 
 import argparse
+import codecs
 import getpass
+import logging
 import os
 import re
 import requests
@@ -20,9 +22,24 @@ import urllib.parse
 import sys
 
 try:
-    from typing import Any  # noqa: F401  # pylint: disable=unused-import
+    from typing import Any, Text  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+if sys.stderr.isatty():
+    logging.addLevelName(logging.INFO, "\033[1;34m%s\033[1;0m" % logging.getLevelName(logging.INFO))
+    logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+
+
+PY2 = sys.version_info.major < 3  # is needed for correct mypy checking
+
+if PY2:
+    str = unicode  # use unicode instead of future `str` since requests cannot handle future `str` well
+    stdin = codecs.getreader("utf-8")(sys.stdin)
+else:
+    basestring = str
+    stdin = sys.stdin
 
 
 __author__ = "Ingo Heimbach"
@@ -32,11 +49,6 @@ __license__ = "MIT"
 __version_info__ = (0, 0, 0)
 __version__ = ".".join(map(str, __version_info__))
 
-
-DEFAULT_DO_SSL_VERIFY = True
-DEFAULT_DOWNLOAD_ENDPOINT = "cgi/url_redirect.cgi?url_name=ikvm&url_type=jwsk"
-DEFAULT_LOGIN_ENDPOINT = "cgi/login.cgi"
-DEFAULT_USER = "ADMIN"
 
 DEFAULTS = {
     "attribute_names": {"user": "name", "password": "pwd"},
@@ -61,11 +73,11 @@ class DownloadFailedError(Exception):
 
 class AttributeDict(dict):
     def __getattr__(self, attr):
-        # type: (str) -> Any
+        # type: (Text) -> Any
         return self[attr]
 
     def __setattr__(self, attr, value):
-        # type: (str, Any) -> None
+        # type: (Text, Any) -> None
         self[attr] = value
 
 
@@ -105,20 +117,20 @@ def get_argumentparser():
         help="login url endpoint (default: %(default)s)",
     )
     parser.add_argument(
-        "-k",
-        "--insecure",
-        action="store_false",
-        dest="ssl_verify",
-        default=DEFAULTS["do_ssl_verify"],
-        help="allow insecure SSL connections (-> SSL without certificate verification) (default: %(default)s)",
-    )
-    parser.add_argument(
         "-d",
         "--download-endpoint",
         action="store",
         dest="download_endpoint",
         default=DEFAULTS["endpoints"]["download"],
         help="download url endpoint (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-k",
+        "--insecure",
+        action="store_false",
+        dest="ssl_verify",
+        default=DEFAULTS["do_ssl_verify"],
+        help="allow insecure SSL connections (-> SSL without certificate verification) (default: %(default)s)",
     )
     parser.add_argument(
         "-U",
@@ -145,18 +157,28 @@ def get_argumentparser():
 def parse_arguments():
     # type: () -> AttributeDict
     parser = get_argumentparser()
-    args = AttributeDict({key: value for key, value in vars(parser.parse_args()).items()})
+    args = AttributeDict(  # Ensure that all strings are unicode strings (relevant for Python 2 only)
+        {
+            str(key): str(value) if isinstance(value, basestring) else value
+            for key, value in vars(parser.parse_args()).items()
+        }
+    )
     if not args.print_version:
         match_obj = re.match(r"(?:https?//)?(.+)/?", args.hostname)
         if match_obj:
             args.hostname = match_obj.group(1)
         else:
             raise InvalidHostnameError("{} is not a valid server name.".format(args.hostname))
-        if sys.stdin.isatty():
-            args.password = getpass.getpass()
-        else:
-            args.password = sys.stdin.readline().rstrip()
     return args
+
+
+def read_password():
+    # type: () -> Text
+    if sys.stdin.isatty():
+        password = getpass.getpass()
+    else:
+        password = stdin.readline().rstrip()
+    return password
 
 
 def get_java_viewer(
@@ -170,7 +192,7 @@ def get_java_viewer(
     user_attribute_name,
     password_attribute_name,
 ):
-    # type: (str, str, str, str, str, str, bool, str, str) -> None
+    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text) -> None
     base_url = "https://{}".format(hostname)
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
     login_url = urllib.parse.urljoin(base_url, login_endpoint)
@@ -181,11 +203,13 @@ def get_java_viewer(
         login_url, verify=ssl_verify, data={user_attribute_name: user, password_attribute_name: password}
     )
     if response.status_code != 200 or not session.cookies:
-        raise LoginFailedError("Login to {} was not successful".format(login_url))
+        raise LoginFailedError("Login to {} was not successful.".format(login_url))
+    logging.info("Logged in to {} as {}".format(hostname, user))
     # Download the kvm viewer with the previous created session
     response = session.get(download_url)
     if response.status_code != 200:
-        raise DownloadFailedError("Downloading the ipmi kvm viewer file from {} failed".format(download_url))
+        raise DownloadFailedError("Downloading the ipmi kvm viewer file from {} failed.".format(download_url))
+    logging.info("Successfully downloaded the kvm viewer.")
     with open(download_location, "w", encoding="utf-8") as f:
         f.write(response.text)
 
@@ -198,10 +222,11 @@ def main():
     else:
         get_java_viewer_exceptions = (LoginFailedError, DownloadFailedError, IOError)
         try:
+            password = read_password()
             get_java_viewer(
                 args.hostname,
                 args.user,
-                args.password,
+                password,
                 args.download_location,
                 args.login_endpoint,
                 args.download_endpoint,
@@ -210,11 +235,13 @@ def main():
                 args.password_attribute_name,
             )
         except get_java_viewer_exceptions as e:
-            print(str(e), file=sys.stderr)
+            logging.error(str(e))
             for i, exception_class in enumerate(get_java_viewer_exceptions, start=3):
-                if isinstance(i, exception_class):
+                if isinstance(e, exception_class):
                     sys.exit(i)
             sys.exit(1)
+        except KeyboardInterrupt:
+            pass
     sys.exit(0)
 
 
