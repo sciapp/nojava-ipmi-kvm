@@ -12,4 +12,13 @@ for v in XRES VNC_WEBPORT; do
     eval sed -i "s/{$v}/\$$v/" /etc/supervisor/conf.d/supervisord.conf
 done
 
+# Install needed Java version
+: ${JAVA_VERSION:=7u181}
+pushd "/opt/java_packages/${JAVA_VERSION}" >/dev/null 2>&1 && \
+dpkg -i *.deb && \
+popd >/dev/null 2>&1 && \
+pushd "/opt/icedtea" >/dev/null 2>&1 && \
+dpkg -i *.deb && \
+popd >/dev/null 2>&1
+
 /usr/bin/supervisord

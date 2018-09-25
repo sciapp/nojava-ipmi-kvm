@@ -137,6 +137,8 @@ def main():
                 host_config.allow_insecure_ssl,
                 host_config.user_login_attribute_name,
                 host_config.password_login_attribute_name,
+                host_config.java_version,
+                host_config.session_cookie_key,
             )
         except view_kvm_console_exceptions as e:
             logging.error(str(e))

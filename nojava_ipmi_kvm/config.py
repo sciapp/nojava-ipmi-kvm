@@ -36,8 +36,10 @@ class HostConfig(object):
         allow_insecure_ssl,
         user_login_attribute_name,
         password_login_attribute_name,
+        java_version,
+        session_cookie_key,
     ):
-        # type: (Text, Text, Text, Text, Text, bool, Text, Text) -> None
+        # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
         self._short_hostname = short_hostname
         self._full_hostname = full_hostname
         self._login_user = login_user
@@ -46,6 +48,8 @@ class HostConfig(object):
         self._allow_insecure_ssl = allow_insecure_ssl
         self._user_login_attribute_name = user_login_attribute_name
         self._password_login_attribute_name = password_login_attribute_name
+        self._java_version = java_version
+        self._session_cookie_key = session_cookie_key
 
     @property
     def short_hostname(self):
@@ -87,6 +91,16 @@ class HostConfig(object):
         # type: () -> Text
         return self._password_login_attribute_name
 
+    @property
+    def java_version(self):
+        # type: () -> Text
+        return self._java_version
+
+    @property
+    def session_cookie_key(self):
+        # type: () -> Optional[Text]
+        return self._session_cookie_key
+
 
 class Config(object):
     _default_config = {
@@ -99,6 +113,8 @@ class Config(object):
         "allow_insecure_ssl": False,
         "user_login_attribute_name": "name",
         "password_login_attribute_name": "pwd",
+        "java_version": "7u181",
+        "session_cookie_key": None,
     }  # type: Dict[Text, Any]
 
     @classmethod

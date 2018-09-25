@@ -21,7 +21,7 @@ import time
 import uuid
 
 try:
-    from typing import Text  # noqa: F401  # pylint: disable=unused-import
+    from typing import Optional, Text  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -63,8 +63,10 @@ def view_kvm_console(
     allow_insecure_ssl,
     user_login_attribute_name,
     password_login_attribute_name,
+    java_version,
+    session_cookie_key=None,
 ):
-    # type: (Text, Text, Text, Text, Text, bool, Text, Text) -> None
+    # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
     def check_docker():
         # type: () -> None
         with open(os.devnull, "w") as devnull:
@@ -83,11 +85,14 @@ def view_kvm_console(
 
     def run_docker():
         # type: () -> subprocess.Popen
+        # TODO: pass variables as `extra_args` (?)
         environment_variables = [
             "-e",
             "XRES={}".format(config.x_resolution),
             "-e",
             "VNC_WEBPORT={}".format(config.vnc_web_port),
+            "-e",
+            "JAVA_VERSION={}".format(java_version),
         ]
         extra_args = [
             "-u",
@@ -102,6 +107,8 @@ def view_kvm_console(
             password_login_attribute_name,
             hostname,
         ]
+        if session_cookie_key is not None:
+            extra_args.extend(("-K", session_cookie_key))
         if allow_insecure_ssl:
             extra_args.insert(0, "-k")
         with open(os.devnull, "w") as devnull:

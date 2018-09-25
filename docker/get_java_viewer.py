@@ -22,7 +22,7 @@ import urllib.parse
 import sys
 
 try:
-    from typing import Any, Text  # noqa: F401  # pylint: disable=unused-import
+    from typing import Any, Optional, Text  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -149,6 +149,9 @@ def get_argumentparser():
         help="name of the password form field on the login page (default: %(default)s)",
     )
     parser.add_argument(
+        "-K", "--session-cookie-key", action="store", dest="session_cookie_key", help="name of the session cookie key"
+    )
+    parser.add_argument(
         "-V", "--version", action="store_true", dest="print_version", help="print the version number and exit"
     )
     return parser
@@ -191,8 +194,9 @@ def get_java_viewer(
     ssl_verify,
     user_attribute_name,
     password_attribute_name,
+    session_cookie_key=None,
 ):
-    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text) -> None
+    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text, Optional[Text]) -> None
     base_url = "https://{}".format(hostname)
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
     login_url = urllib.parse.urljoin(base_url, login_endpoint)
@@ -202,6 +206,18 @@ def get_java_viewer(
     response = session.post(
         login_url, verify=ssl_verify, data={user_attribute_name: user, password_attribute_name: password}
     )
+    if response.status_code == 200 and not any(
+        re.search(r"(session)|(SESSION)", key) for key in session.cookies.keys()
+    ):
+        session_cookie_regex = re.compile(r"'?(\w*(?:session)|(?:SESSION)\w*)'?\s*[:=]\s*'(\w+)'")
+        for line in response.text.split("\n"):
+            match_obj = session_cookie_regex.search(line)
+            if match_obj is not None:
+                if session_cookie_key is None:
+                    session_cookie_key = match_obj.group(1)
+                session_cookie_value = match_obj.group(2)
+                session.cookies.set(session_cookie_key, session_cookie_value)
+                break
     if response.status_code != 200 or not session.cookies:
         raise LoginFailedError("Login to {} was not successful.".format(login_url))
     logging.info("Logged in to {} as {}".format(hostname, user))
@@ -233,6 +249,7 @@ def main():
                 args.ssl_verify,
                 args.user_attribute_name,
                 args.password_attribute_name,
+                args.session_cookie_key,
             )
         except get_java_viewer_exceptions as e:
             logging.error(str(e))
