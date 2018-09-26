@@ -45,6 +45,10 @@ class DockerNotCallableError(Exception):
     pass
 
 
+class DockerPortNotReadableError(Exception):
+    pass
+
+
 class DockerTerminatedError(Exception):
     pass
 
@@ -84,13 +88,11 @@ def view_kvm_console(
                     )
 
     def run_docker():
-        # type: () -> subprocess.Popen
+        # type: () -> Tuple[subprocess.Popen, int]
         # TODO: pass variables as `extra_args` (?)
         environment_variables = [
             "-e",
             "XRES={}".format(config.x_resolution),
-            "-e",
-            "VNC_WEBPORT={}".format(config.vnc_web_port),
             "-e",
             "JAVA_VERSION={}".format(java_version),
         ]
@@ -114,15 +116,7 @@ def view_kvm_console(
         with open(os.devnull, "w") as devnull:
             logging.info("Starting the Docker container...")
             docker_process = subprocess.Popen(
-                [
-                    "docker",
-                    "run",
-                    "-i",
-                    "-p",
-                    "{}:{}".format(config.vnc_web_port, config.vnc_web_port),
-                    "--name",
-                    DOCKER_CONTAINER_NAME,
-                ]
+                ["docker", "run", "-i", "-P", "--name", DOCKER_CONTAINER_NAME]
                 + environment_variables
                 + [config.docker_image]
                 + extra_args,
@@ -136,10 +130,23 @@ def view_kvm_console(
             else:
                 # This case cannot happen (`if` is used to satisfy mypy)
                 raise IOError("Something strange happened: Docker stdin not available.")
+            while True:
+                try:
+                    vnc_web_port = int(
+                        subprocess.check_output(["docker", "port", DOCKER_CONTAINER_NAME], stderr=devnull)
+                        .strip()
+                        .split(":")[1]
+                    )
+                    break
+                except (IndexError, ValueError):
+                    terminate_docker(docker_process)
+                    raise DockerPortNotReadableError("Cannot read the exposted VNC web port.")
+                except subprocess.CalledProcessError:
+                    time.sleep(1)
         logging.info("Waiting for the Docker container to be up and ready...")
         while True:
             try:
-                response = requests.get("http://localhost:{}".format(config.vnc_web_port))
+                response = requests.get("http://localhost:{}".format(vnc_web_port))
                 response.raise_for_status()
                 break
             except (requests.ConnectionError, requests.HTTPError):
@@ -151,7 +158,7 @@ def view_kvm_console(
                     )
                 time.sleep(1)
         logging.info("Docker container is up and running.")
-        return docker_process
+        return docker_process, vnc_web_port
 
     def terminate_docker(docker_process):
         # type: (subprocess.Popen) -> None
@@ -165,12 +172,11 @@ def view_kvm_console(
         sys.exit(0)
 
     check_docker()
-    docker_process = run_docker()
+    docker_process, vnc_web_port = run_docker()
     signal.signal(signal.SIGINT, handle_sigint)
     run_vnc_browser(
-        "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true".format(
-            config.vnc_web_port, config.vnc_web_port
-        ),
+        "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true".format(vnc_web_port, vnc_web_port),
+        hostname,
         tuple(int(c) for c in config.x_resolution.split("x")),
     )
     terminate_docker(docker_process)

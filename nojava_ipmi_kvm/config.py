@@ -104,7 +104,7 @@ class HostConfig(object):
 
 class Config(object):
     _default_config = {
-        "general": {"docker_image": "sciapp/nojava-ipmi-kvm:latest", "vnc_web_port": 8080, "x_resolution": "1024x768"}
+        "general": {"docker_image": "sciapp/nojava-ipmi-kvm:latest", "x_resolution": "1024x768"}
     }  # type: Dict[Text, Dict[Text, Any]]
     _default_host_config = {
         "login_user": "ADMIN",
@@ -161,11 +161,6 @@ class Config(object):
     def docker_image(self):
         # type: () -> Text
         return self._config["general"]["docker_image"]
-
-    @property
-    def vnc_web_port(self):
-        # type: () -> int
-        return int(self._config["general"]["vnc_web_port"])
 
     @property
     def x_resolution(self):

@@ -14,7 +14,7 @@ import os
 import signal
 
 try:
-    from typing import Text  # noqa: F401  # pylint: disable=unused-import
+    from typing import Text, Tuple  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -34,13 +34,13 @@ class VncBrowserWidget(QtWebEngineWidgets.QWebEngineView):
         self.load(QtCore.QUrl(self._url))
 
 
-def run_vnc_browser(url, window_size):
-    # type: (Text) -> bool
+def run_vnc_browser(url, hostname, window_size):
+    # type: (Text, Text, Tuple[int, int]) -> bool
     app = QtWidgets.QApplication(sys.argv)
     # Ensure that the rest of the application can terminate (-> Docker container)
     app.aboutToQuit.connect(lambda: os.kill(os.getpid(), signal.SIGINT))
     vnc_browser_window = VncBrowserWidget(url)
-    vnc_browser_window.setWindowTitle("nojava-ipmi-kvm")
+    vnc_browser_window.setWindowTitle("nojava-ipmi-kvm [{}]".format(hostname))
     vnc_browser_window.setFixedSize(*window_size)
     vnc_browser_window.show()
     # Let the Python interpreter run every 500 ms to handle signals like SIGINT
