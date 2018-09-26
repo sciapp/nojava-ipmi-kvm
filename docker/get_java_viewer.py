@@ -46,7 +46,7 @@ __author__ = "Ingo Heimbach"
 __email__ = "i.heimbach@fz-juelich.de"
 __copyright__ = "Copyright © 2018 Forschungszentrum Jülich GmbH. All rights reserved."
 __license__ = "MIT"
-__version_info__ = (0, 0, 0)
+__version_info__ = (0, 1, 0)
 __version__ = ".".join(map(str, __version_info__))
 
 
