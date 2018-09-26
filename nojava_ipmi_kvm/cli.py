@@ -36,6 +36,7 @@ PY2 = sys.version_info.major < 3  # is needed for correct mypy checking
 if PY2:
     stdin = codecs.getreader("utf-8")(sys.stdin)
 else:
+    basestring = str
     stdin = sys.stdin
 
 

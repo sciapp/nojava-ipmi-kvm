@@ -125,7 +125,7 @@ def view_kvm_console(
                 stderr=devnull,
             )
             if docker_process.stdin is not None:
-                docker_process.stdin.write("{}\n".format(login_password))
+                docker_process.stdin.write("{}\n".format(login_password).encode("utf-8"))
                 docker_process.stdin.flush()
             else:
                 # This case cannot happen (`if` is used to satisfy mypy)
@@ -135,7 +135,7 @@ def view_kvm_console(
                     vnc_web_port = int(
                         subprocess.check_output(["docker", "port", DOCKER_CONTAINER_NAME], stderr=devnull)
                         .strip()
-                        .split(":")[1]
+                        .split(b":")[1]
                     )
                     break
                 except (IndexError, ValueError):
