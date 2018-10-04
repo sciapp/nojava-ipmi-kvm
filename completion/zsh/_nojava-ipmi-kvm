@@ -1,0 +1,12 @@
+#compdef nojava-ipmi-kvm
+
+function _nojava-ipmi-kvm {
+    local hosts
+    hosts=( $(awk '$0~/^\[[^\]]+\]$/ && $0 != "[general]" { print substr($0, 2, length($0)-2) }' ~/.nojava-ipmi-kvmrc 2>/dev/null | sort) )
+
+    _arguments '*:hosts:($hosts)'
+
+    return
+}
+
+_nojava-ipmi-kvm "@"

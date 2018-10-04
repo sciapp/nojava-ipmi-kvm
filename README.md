@@ -97,3 +97,16 @@ optional arguments:
                         print the default config to stdout and exit
   -V, --version         print the version number and exit
 ```
+
+## Command line completion
+
+This repository offers a completion script for zsh users (only hostnames currently, no options). You can install the
+completion script with [zplug](https://github.com/zplug/zplug) or manually.
+
+### Using zplug
+
+Add `zplug "sciapp/nojava-ipmi-kvm"` to your `.zshrc`.
+
+### Manual
+
+Clone this repository and source `nojava_ipmi_kvm_completion.plugin.zsh` in your `.zshrc`.
