@@ -104,7 +104,7 @@ class HostConfig(object):
 
 class Config(object):
     _default_config = {
-        "general": {"docker_image": "sciapp/nojava-ipmi-kvm:latest", "x_resolution": "1024x768"}
+        "general": {"docker_image": "sciapp/nojava-ipmi-kvm:v{version}", "x_resolution": "1024x768"}
     }  # type: Dict[Text, Dict[Text, Any]]
     _default_host_config = {
         "login_user": "ADMIN",

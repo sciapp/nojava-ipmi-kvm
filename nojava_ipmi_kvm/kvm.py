@@ -28,6 +28,7 @@ except ImportError:
 from types import FrameType
 from .browser import run_vnc_browser
 from .config import config
+from ._version import __version__
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 if sys.stderr.isatty():
@@ -118,7 +119,7 @@ def view_kvm_console(
             docker_process = subprocess.Popen(
                 ["docker", "run", "-i", "-P", "--name", DOCKER_CONTAINER_NAME]
                 + environment_variables
-                + [config.docker_image]
+                + [config.docker_image.format(version=__version__)]
                 + extra_args,
                 stdin=subprocess.PIPE,
                 stdout=devnull,
