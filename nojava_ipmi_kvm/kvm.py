@@ -21,13 +21,14 @@ import time
 import uuid
 
 try:
-    from typing import Optional, Text  # noqa: F401  # pylint: disable=unused-import
+    from typing import Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
 from types import FrameType
 from .browser import run_vnc_browser
 from .config import config
+from ._version import __version__
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 if sys.stderr.isatty():
@@ -118,7 +119,7 @@ def view_kvm_console(
             docker_process = subprocess.Popen(
                 ["docker", "run", "-i", "-P", "--name", DOCKER_CONTAINER_NAME]
                 + environment_variables
-                + [config.docker_image]
+                + [config.docker_image.format(version=__version__)]
                 + extra_args,
                 stdin=subprocess.PIPE,
                 stdout=devnull,
@@ -132,6 +133,10 @@ def view_kvm_console(
                 raise IOError("Something strange happened: Docker stdin not available.")
             while True:
                 try:
+                    if docker_process.poll() is not None:
+                        raise DockerTerminatedError(
+                            "Docker terminated with return code {}.".format(docker_process.returncode)
+                        )
                     vnc_web_port = int(
                         subprocess.check_output(["docker", "port", DOCKER_CONTAINER_NAME], stderr=devnull)
                         .strip()
