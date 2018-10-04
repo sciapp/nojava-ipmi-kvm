@@ -21,7 +21,7 @@ import time
 import uuid
 
 try:
-    from typing import Optional, Text  # noqa: F401  # pylint: disable=unused-import
+    from typing import Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
