@@ -133,6 +133,10 @@ def view_kvm_console(
                 raise IOError("Something strange happened: Docker stdin not available.")
             while True:
                 try:
+                    if docker_process.poll() is not None:
+                        raise DockerTerminatedError(
+                            "Docker terminated with return code {}.".format(docker_process.returncode)
+                        )
                     vnc_web_port = int(
                         subprocess.check_output(["docker", "port", DOCKER_CONTAINER_NAME], stderr=devnull)
                         .strip()
