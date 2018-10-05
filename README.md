@@ -60,9 +60,12 @@ In addition, you can create a `general` section to configure more general settin
 
 ```
 [general]
+run_docker_with_sudo = False
 x_resolution = 1600x1200
 ```
 
+-   `run_docker_with_sudo`: Set to True if the `docker` command must be called with `sudo` (needed on Linux if your user
+    account is not a member of the `docker` group, defaults to `False`)
 -   `x_resolution`: Resolution of the X server and size of the VNC window (default: `1024x768`)
 
 ### Using the command line tool

@@ -21,7 +21,7 @@ import time
 import uuid
 
 try:
-    from typing import Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
+    from typing import List, Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -59,6 +59,15 @@ def running_macos():
     return platform.system() == "Darwin"
 
 
+def is_command_available(command):
+    # type: (Text) -> bool
+    for path in os.environ["PATH"].split(os.pathsep):
+        potential_command_path = os.path.join(path, command)
+        if os.path.exists(potential_command_path) and os.access(potential_command_path, os.X_OK):
+            return True
+    return False
+
+
 def view_kvm_console(
     hostname,
     login_user,
@@ -72,20 +81,29 @@ def view_kvm_console(
     session_cookie_key=None,
 ):
     # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
+    def add_sudo_if_configured(command_list):
+        # type: (List[Text]) -> List[Text]
+        if config.run_docker_with_sudo:
+            command_list.insert(0, "sudo")
+        return command_list
+
     def check_docker():
         # type: () -> None
         with open(os.devnull, "w") as devnull:
-            if subprocess.call(["command", "-v", "docker"], stdout=devnull, stderr=devnull) != 0:
+            if not is_command_available("docker"):
                 raise DockerNotInstalledError("Could not find the `docker` command. Please install Docker first.")
-            if subprocess.call(["docker", "ps"], stdout=devnull, stderr=devnull) != 0:
+            if subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=devnull, stderr=devnull) != 0:
                 if running_macos():
                     subprocess.check_call(["open", "-g", "-a", "Docker"])
                     logging.info("Waiting for the Docker engine to be ready...")
-                    while subprocess.call(["docker", "ps"], stdout=devnull, stderr=devnull) != 0:
+                    while (
+                        subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=devnull, stderr=devnull) != 0
+                    ):
                         time.sleep(1)
                 else:
                     raise DockerNotCallableError(
-                        "`docker` cannot be called. Maybe you are not allowed to call `docker` directly?"
+                        "`docker` cannot be called. If `docker` needs `sudo`, please set `run_docker_with_sudo = True`"
+                        " in your `~/.nojava-ipmi-kvmrc`."
                     )
 
     def run_docker():
@@ -117,7 +135,19 @@ def view_kvm_console(
         with open(os.devnull, "w") as devnull:
             logging.info("Starting the Docker container...")
             docker_process = subprocess.Popen(
-                ["docker", "run", "-i", "-P", "--name", DOCKER_CONTAINER_NAME]
+                add_sudo_if_configured(
+                    [
+                        "docker",
+                        "run",
+                        "--rm",
+                        "-i",
+                        "-P",
+                        "-v",
+                        "/etc/hosts:/etc/hosts:ro",
+                        "--name",
+                        DOCKER_CONTAINER_NAME,
+                    ]
+                )
                 + environment_variables
                 + [config.docker_image.format(version=__version__)]
                 + extra_args,
@@ -138,7 +168,9 @@ def view_kvm_console(
                             "Docker terminated with return code {}.".format(docker_process.returncode)
                         )
                     vnc_web_port = int(
-                        subprocess.check_output(["docker", "port", DOCKER_CONTAINER_NAME], stderr=devnull)
+                        subprocess.check_output(
+                            add_sudo_if_configured(["docker", "port", DOCKER_CONTAINER_NAME]), stderr=devnull
+                        )
                         .strip()
                         .split(b":")[1]
                     )
@@ -169,7 +201,9 @@ def view_kvm_console(
         # type: (subprocess.Popen) -> None
         if docker_process.poll() is None:
             with open(os.devnull, "w") as devnull:
-                subprocess.check_call(["docker", "kill", DOCKER_CONTAINER_NAME], stdout=devnull, stderr=devnull)
+                subprocess.check_call(
+                    add_sudo_if_configured(["docker", "kill", DOCKER_CONTAINER_NAME]), stdout=devnull, stderr=devnull
+                )
 
     def handle_sigint(sig, frame):
         # type: (int, FrameType) -> None
