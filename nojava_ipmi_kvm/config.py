@@ -104,7 +104,11 @@ class HostConfig(object):
 
 class Config(object):
     _default_config = {
-        "general": {"docker_image": "sciapp/nojava-ipmi-kvm:v{version}", "x_resolution": "1024x768"}
+        "general": {
+            "docker_image": "sciapp/nojava-ipmi-kvm:v{version}",
+            "run_docker_with_sudo": False,
+            "x_resolution": "1024x768",
+        }
     }  # type: Dict[Text, Dict[Text, Any]]
     _default_host_config = {
         "login_user": "ADMIN",
@@ -161,6 +165,11 @@ class Config(object):
     def docker_image(self):
         # type: () -> Text
         return self._config["general"]["docker_image"]
+
+    @property
+    def run_docker_with_sudo(self):
+        # type: () -> bool
+        return self._config["general"].getboolean("run_docker_with_sudo")
 
     @property
     def x_resolution(self):
