@@ -100,13 +100,31 @@ optional arguments:
 
 ## Command line completion
 
-This repository offers a completion script for zsh users (only hostnames currently, no options). You can install the
-completion script with [zplug](https://github.com/zplug/zplug) or manually.
+This repository offers a completion script for bash and zsh (only hostnames currently, no options).
 
-### Using zplug
+### Bash
 
-Add `zplug "sciapp/nojava-ipmi-kvm"` to your `.zshrc`.
+Download [the Bash completion
+file](https://raw.githubusercontent.com/sciapp/nojava-ipmi-kvm/master/completion/bash/nojava-ipmi-kvm-completion.bash)
+and source it in your `.bashrc`, for example by running:
 
-### Manual
+```bash
+curl -o .nojava-ipmi-kvm-completion.bash -L https://raw.githubusercontent.com/sciapp/nojava-ipmi-kvm/master/completion/bash/nojava-ipmi-kvm-completion.bash
+echo '[ -r "${HOME}/.nojava-ipmi-kvm-completion.bash" ] && source "${HOME}/.nojava-ipmi-kvm-completion.bash"' >> ~/.bashrc
+```
+
+### Zsh
+
+You can install the completion script with [zplug](https://github.com/zplug/zplug) or manually.
+
+#### Using zplug
+
+Add `zplug "sciapp/nojava-ipmi-kvm"` to your `.zshrc`, open a new shell and run
+
+```bash
+zplug install
+```
+
+#### Manual
 
 Clone this repository and source `nojava_ipmi_kvm_completion.plugin.zsh` in your `.zshrc`.
