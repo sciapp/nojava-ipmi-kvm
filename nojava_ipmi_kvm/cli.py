@@ -23,7 +23,13 @@ try:
 except ImportError:
     pass
 from .config import config, DEFAULT_CONFIG_FILEPATH, InvalidHostnameError
-from .kvm import view_kvm_console, DockerNotInstalledError, DockerNotCallableError, DockerTerminatedError
+from .kvm import (
+    view_kvm_console,
+    WebserverNotReachableError,
+    DockerNotInstalledError,
+    DockerNotCallableError,
+    DockerTerminatedError,
+)
 from ._version import __version__, __version_info__  # noqa: F401  # pylint: disable=unused-import
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -121,6 +127,7 @@ def main():
     else:
         view_kvm_console_exceptions = (
             InvalidHostnameError,
+            WebserverNotReachableError,
             DockerNotInstalledError,
             DockerNotCallableError,
             DockerTerminatedError,

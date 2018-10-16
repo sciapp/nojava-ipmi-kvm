@@ -38,6 +38,10 @@ if sys.stderr.isatty():
 DOCKER_CONTAINER_NAME = "nojava-ipmi-kvmrc-{}".format(uuid.uuid4())
 
 
+class WebserverNotReachableError(Exception):
+    pass
+
+
 class DockerNotInstalledError(Exception):
     pass
 
@@ -86,6 +90,16 @@ def view_kvm_console(
         if config.run_docker_with_sudo:
             command_list.insert(0, "sudo")
         return command_list
+
+    def check_webserver(url):
+        # type: (Text) -> None
+        logging.info("Check if '%s' is reachable...", url)
+        try:
+            response = requests.head(url)
+            response.raise_for_status()
+            logging.info("The url '%s' is reachable.", url)
+        except (requests.ConnectionError, requests.HTTPError):
+            raise WebserverNotReachableError("The url '{}' is not reachable. Is the host down?".format(url))
 
     def check_docker():
         # type: () -> None
@@ -183,7 +197,7 @@ def view_kvm_console(
         logging.info("Waiting for the Docker container to be up and ready...")
         while True:
             try:
-                response = requests.get("http://localhost:{}".format(vnc_web_port))
+                response = requests.head("http://localhost:{}".format(vnc_web_port))
                 response.raise_for_status()
                 break
             except (requests.ConnectionError, requests.HTTPError):
@@ -210,6 +224,7 @@ def view_kvm_console(
         terminate_docker(docker_process)
         sys.exit(0)
 
+    check_webserver("http://{}/".format(hostname))
     check_docker()
     docker_process, vnc_web_port = run_docker()
     signal.signal(signal.SIGINT, handle_sigint)
