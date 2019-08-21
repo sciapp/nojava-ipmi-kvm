@@ -10,6 +10,7 @@ from future import standard_library
 
 standard_library.install_aliases()  # noqa: E402
 
+import atexit
 import logging
 import os
 import platform
@@ -218,19 +219,14 @@ def view_kvm_console(
                 subprocess.check_call(
                     add_sudo_if_configured(["docker", "kill", DOCKER_CONTAINER_NAME]), stdout=devnull, stderr=devnull
                 )
-
-    def handle_sigint(sig, frame):
-        # type: (int, FrameType) -> None
-        terminate_docker(docker_process)
-        sys.exit(0)
+        logging.info("Docker container was terminated.")
 
     check_webserver("http://{}/".format(hostname))
     check_docker()
     docker_process, vnc_web_port = run_docker()
-    signal.signal(signal.SIGINT, handle_sigint)
+    atexit.register(lambda: terminate_docker(docker_process))
     run_vnc_browser(
         "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true".format(vnc_web_port, vnc_web_port),
         hostname,
         tuple(int(c) for c in config.x_resolution.split("x")),
     )
-    terminate_docker(docker_process)
