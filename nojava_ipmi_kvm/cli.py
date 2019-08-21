@@ -16,6 +16,7 @@ import codecs
 import getpass
 import logging
 import os
+import signal
 import sys
 
 try:
@@ -116,6 +117,14 @@ def read_password():
     return password
 
 
+def setup_signal_handling():
+    # type: () -> None
+    # Handle SIGINT like SIGTERM
+    signal.signal(signal.SIGINT, lambda sig, frame: os.kill(os.getpid(), signal.SIGTERM))
+    # Do a normal program exit on SIGTERM to ensure all exit handlers will be run (-> `atexit`)
+    signal.signal(signal.SIGTERM, lambda sig, frame: sys.exit(0))
+
+
 def main():
     # type: () -> None
     args = parse_arguments()
@@ -125,6 +134,7 @@ def main():
         config.write_default_config(sys.stdout)
         sys.exit(0)
     else:
+        setup_signal_handling()
         view_kvm_console_exceptions = (
             InvalidHostnameError,
             WebserverNotReachableError,
