@@ -1,15 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import *  # noqa: F401,F403  pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from future import standard_library
-
-standard_library.install_aliases()  # noqa: E402
-
 import copy
 from configparser import ConfigParser
 

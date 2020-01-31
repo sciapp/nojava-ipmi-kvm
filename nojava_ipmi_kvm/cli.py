@@ -1,16 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import *  # noqa: F401,F403  pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from future import standard_library
-
-standard_library.install_aliases()  # noqa: E402
-
 import argparse
 import codecs
 import getpass
@@ -36,15 +26,6 @@ from ._version import __version__, __version_info__  # noqa: F401  # pylint: dis
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 if sys.stderr.isatty():
     logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
-
-
-PY2 = sys.version_info.major < 3  # is needed for correct mypy checking
-
-if PY2:
-    stdin = codecs.getreader("utf-8")(sys.stdin)
-else:
-    basestring = str
-    stdin = sys.stdin
 
 
 class AttributeDict(dict):
@@ -96,7 +77,7 @@ def parse_arguments():
     parser = get_argumentparser()
     args = AttributeDict(  # Ensure that all strings are unicode strings (relevant for Python 2 only)
         {
-            str(key): str(value) if isinstance(value, basestring) else value
+            str(key): str(value) if isinstance(value, str) else value
             for key, value in vars(parser.parse_args()).items()
         }
     )
@@ -113,7 +94,7 @@ def read_password():
     if sys.stdin.isatty():
         password = getpass.getpass()
     else:
-        password = stdin.readline().rstrip()
+        password = sys.stdin.readline().rstrip()
     return password
 
 

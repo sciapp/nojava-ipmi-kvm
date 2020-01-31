@@ -1,15 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import *  # noqa: F401,F403  pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from future import standard_library
-
-standard_library.install_aliases()  # noqa: E402
-
 import atexit
 import logging
 import os
@@ -28,6 +18,7 @@ except ImportError:
 
 from types import FrameType
 from .browser import run_vnc_browser
+from .utils import generate_temp_password
 from .config import config
 from ._version import __version__
 
@@ -124,11 +115,16 @@ def view_kvm_console(
     def run_docker():
         # type: () -> Tuple[subprocess.Popen, int]
         # TODO: pass variables as `extra_args` (?)
+        vnc_password = generate_temp_password(20)
         environment_variables = [
             "-e",
             "XRES={}".format(config.x_resolution),
             "-e",
             "JAVA_VERSION={}".format(java_version),
+            "-e",
+            "VNC_PASSWD={}".format(vnc_password),
+            "-e",
+            "KVM_HOSTNAME={}".format(hostname)
         ]
         extra_args = [
             "-u",
@@ -210,7 +206,7 @@ def view_kvm_console(
                     )
                 time.sleep(1)
         logging.info("Docker container is up and running.")
-        return docker_process, vnc_web_port
+        return docker_process, vnc_web_port, vnc_password
 
     def terminate_docker(docker_process):
         # type: (subprocess.Popen) -> None
@@ -223,10 +219,12 @@ def view_kvm_console(
 
     check_webserver("http://{}/".format(hostname))
     check_docker()
-    docker_process, vnc_web_port = run_docker()
+    docker_process, vnc_web_port, vnc_password = run_docker()
     atexit.register(lambda: terminate_docker(docker_process))
+    url = "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(vnc_web_port, vnc_web_port, vnc_password)
+    logging.info("Url to view kvm console: {}".format(url))
     run_vnc_browser(
-        "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true".format(vnc_web_port, vnc_web_port),
+        url,
         hostname,
         tuple(int(c) for c in config.x_resolution.split("x")),
     )

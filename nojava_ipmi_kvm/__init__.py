@@ -1,8 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from .kvm import view_kvm_console
 from ._version import __version__, __version_info__  # noqa: F401  # pylint: disable=unused-import
 
