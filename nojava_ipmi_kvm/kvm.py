@@ -63,8 +63,25 @@ def is_command_available(command):
             return True
     return False
 
+class KvmViewer:
+    def __init__(self, url, kill_process):
+        self._url = url
+        self._kill_process = kill_process
+        self._already_killed = False
 
-def view_kvm_console(
+        atexit.register(self.kill_process)
+
+    @property
+    def url(self):
+        return self._url
+
+    def kill_process(self):
+        if self._already_killed:
+            return
+        self._already_killed = True
+        return self._kill_process()
+
+def start_kvm_container(
     hostname,
     login_user,
     login_password,
@@ -220,11 +237,8 @@ def view_kvm_console(
     check_webserver("http://{}/".format(hostname))
     check_docker()
     docker_process, vnc_web_port, vnc_password = run_docker()
-    atexit.register(lambda: terminate_docker(docker_process))
+
     url = "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(vnc_web_port, vnc_web_port, vnc_password)
     logging.info("Url to view kvm console: {}".format(url))
-    run_vnc_browser(
-        url,
-        hostname,
-        tuple(int(c) for c in config.x_resolution.split("x")),
-    )
+
+    return KvmViewer(url, lambda: terminate_docker(docker_process))

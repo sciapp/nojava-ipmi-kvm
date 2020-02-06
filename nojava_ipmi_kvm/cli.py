@@ -14,12 +14,13 @@ except ImportError:
     pass
 from .config import config, DEFAULT_CONFIG_FILEPATH, InvalidHostnameError
 from .kvm import (
-    view_kvm_console,
+    start_kvm_container,
     WebserverNotReachableError,
     DockerNotInstalledError,
     DockerNotCallableError,
     DockerTerminatedError,
 )
+from .browser import run_vnc_browser
 from ._version import __version__, __version_info__  # noqa: F401  # pylint: disable=unused-import
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -115,7 +116,7 @@ def main():
         sys.exit(0)
     else:
         setup_signal_handling()
-        view_kvm_console_exceptions = (
+        start_kvm_container_exceptions = (
             InvalidHostnameError,
             WebserverNotReachableError,
             DockerNotInstalledError,
@@ -126,7 +127,7 @@ def main():
             config.read_config(args.config_filepath)
             host_config = config[args.hostname]
             password = read_password()
-            view_kvm_console(
+            kvm_viewer = start_kvm_container(
                 host_config.full_hostname,
                 host_config.login_user,
                 password,
@@ -138,9 +139,15 @@ def main():
                 host_config.java_version,
                 host_config.session_cookie_key,
             )
-        except view_kvm_console_exceptions as e:
+            run_vnc_browser(
+                kvm_viewer.url,
+                host_config.full_hostname,
+                tuple(int(c) for c in config.x_resolution.split("x")),
+            )
+            kvm_viewer.kill_process()
+        except start_kvm_container_exceptions as e:
             logging.error(str(e))
-            for i, exception_class in enumerate(view_kvm_console_exceptions, start=3):
+            for i, exception_class in enumerate(start_kvm_container_exceptions, start=3):
                 if isinstance(e, exception_class):
                     sys.exit(i)
             sys.exit(1)
