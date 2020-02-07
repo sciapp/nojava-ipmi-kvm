@@ -1,5 +1,4 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 
 import argparse
 import getpass
@@ -26,16 +25,6 @@ from ._version import __version__, __version_info__  # noqa: F401  # pylint: dis
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 if sys.stderr.isatty():
     logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
-
-
-class AttributeDict(dict):
-    def __getattr__(self, attr):
-        # type: (str) -> Any
-        return self[attr]
-
-    def __setattr__(self, attr, value):
-        # type: (str, Any) -> None
-        self[attr] = value
 
 
 def get_argumentparser():
@@ -75,12 +64,7 @@ def get_argumentparser():
 def parse_arguments():
     # type: () -> AttributeDict
     parser = get_argumentparser()
-    args = AttributeDict(  # Ensure that all strings are unicode strings (relevant for Python 2 only)
-        {
-            str(key): str(value) if isinstance(value, str) else value
-            for key, value in vars(parser.parse_args()).items()
-        }
-    )
+    args = parser.parse_args()
     if not args.print_version and not args.print_default_config:
         if args.hostname is None:
             parser.print_help()

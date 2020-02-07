@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from .kvm import start_kvm_container
 from ._version import __version__, __version_info__  # noqa: F401  # pylint: disable=unused-import
 
