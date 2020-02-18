@@ -15,7 +15,6 @@ except ImportError:
     pass
 
 from types import FrameType
-from .browser import run_vnc_browser
 from .utils import generate_temp_password
 from .config import config
 from ._version import __version__
@@ -25,7 +24,6 @@ if sys.stderr.isatty():
     logging.addLevelName(logging.INFO, "\033[1;34m%s\033[1;0m" % logging.getLevelName(logging.INFO))
 
 
-DOCKER_CONTAINER_NAME = "nojava-ipmi-kvmrc-{}".format(uuid.uuid4())
 
 
 class WebserverNotReachableError(Exception):
@@ -90,8 +88,12 @@ def start_kvm_container(
     password_login_attribute_name,
     java_version,
     session_cookie_key=None,
+    external_vnc_dns='localhost',
+    docker_port=None,
 ):
     # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
+
+    DOCKER_CONTAINER_NAME = "nojava-ipmi-kvmrc-{}".format(uuid.uuid4())
     def add_sudo_if_configured(command_list):
         # type: (List[Text]) -> List[Text]
         if config.run_docker_with_sudo:
@@ -167,7 +169,6 @@ def start_kvm_container(
                         "run",
                         "--rm",
                         "-i",
-                        "-P",
                         "-v",
                         "/etc/hosts:/etc/hosts:ro",
                         "--name",
@@ -175,6 +176,12 @@ def start_kvm_container(
                     ]
                 )
                 + environment_variables
+                + ([
+                    "-P"
+                ] if docker_port is None else [
+                    "-p",
+                    "{}:8080".format(docker_port),
+                ])
                 + [config.docker_image.format(version=__version__)]
                 + extra_args,
                 stdin=subprocess.PIPE,
@@ -206,6 +213,7 @@ def start_kvm_container(
                     raise DockerPortNotReadableError("Cannot read the exposted VNC web port.")
                 except subprocess.CalledProcessError:
                     time.sleep(1)
+                    # Add await here
         logging.info("Waiting for the Docker container to be up and ready...")
         while True:
             try:
@@ -220,6 +228,7 @@ def start_kvm_container(
                         )
                     )
                 time.sleep(1)
+                # Here too
         logging.info("Docker container is up and running.")
         return docker_process, vnc_web_port, vnc_password
 
@@ -236,7 +245,7 @@ def start_kvm_container(
     check_docker()
     docker_process, vnc_web_port, vnc_password = run_docker()
 
-    url = "http://localhost:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(vnc_web_port, vnc_web_port, vnc_password)
+    url = "http://{}:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(external_vnc_dns, vnc_web_port, vnc_web_port, vnc_password)
     logging.info("Url to view kvm console: {}".format(url))
 
     return KvmViewer(url, lambda: terminate_docker(docker_process))

@@ -69,7 +69,7 @@ def parse_arguments():
         if args.hostname is None:
             parser.print_help()
             sys.exit(0)
-        args.config_filepath = os.path.abspath(os.path.expanduser(args.config_filepath))
+        args.config_filepath = args.config_filepath
     return args
 
 
