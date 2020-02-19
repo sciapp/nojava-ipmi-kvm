@@ -45,6 +45,7 @@ def get_long_description_from_readme(readme_filename="README.md"):
 version = get_version_from_pyfile()
 long_description = get_long_description_from_readme()
 install_requires = get_install_requires_from_requirements()
+install_requires_gui = get_install_requires_from_requirements('requirements-gui.txt')
 
 setup(
     name="nojava-ipmi-kvm",
@@ -52,6 +53,9 @@ setup(
     packages=find_packages(),
     python_requires="~=3.5",
     install_requires=install_requires,
+    extras_require={
+        "GUI": install_requires_gui
+    },
     entry_points={"console_scripts": ["nojava-ipmi-kvm = nojava_ipmi_kvm.cli:main"]},
     author="Ingo Heimbach",
     author_email="i.heimbach@fz-juelich.de",

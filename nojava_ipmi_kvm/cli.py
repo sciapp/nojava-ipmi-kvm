@@ -20,7 +20,7 @@ from .kvm import (
     DockerNotCallableError,
     DockerTerminatedError,
 )
-from .browser import run_vnc_browser
+from . import browser
 from ._version import __version__, __version_info__  # noqa: F401  # pylint: disable=unused-import
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -55,6 +55,12 @@ def get_argumentparser():
         action="store_true",
         dest="print_default_config",
         help="print the default config to stdout and exit",
+    )
+    parser.add_argument(
+        "--use-gui",
+        action="store_true",
+        dest="use_gui",
+        help="automatically open a PyQt5 browser window. Requires PyQt5 to be installed"
     )
     parser.add_argument(
         "-V", "--version", action="store_true", dest="print_version", help="print the version number and exit"
@@ -124,11 +130,16 @@ def main():
                 host_config.java_version,
                 host_config.session_cookie_key,
             ))
-            run_vnc_browser(
-                kvm_viewer.url,
-                host_config.full_hostname,
-                tuple(int(c) for c in config.x_resolution.split("x")),
-            )
+            if args.use_gui and browser.qt_installed:
+                browser.run_vnc_browser(
+                    kvm_viewer.url,
+                    host_config.full_hostname,
+                    tuple(int(c) for c in config.x_resolution.split("x")),
+                )
+            else:
+                print("Use this url: %s to view kvm." % kvm_viewer.url)
+                print("Press ENTER or CTRL-C to shutdown container and exit")
+                sys.stdin.readline()
             kvm_viewer.kill_process()
         except start_kvm_container_exceptions as e:
             logging.error(str(e))
