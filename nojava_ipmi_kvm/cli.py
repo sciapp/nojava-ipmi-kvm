@@ -6,6 +6,7 @@ import logging
 import os
 import signal
 import sys
+import asyncio
 
 try:
     from typing import Any  # noqa: F401  # pylint: disable=unused-import
@@ -111,7 +112,7 @@ def main():
             config.read_config(args.config_filepath)
             host_config = config[args.hostname]
             password = read_password()
-            kvm_viewer = start_kvm_container(
+            kvm_viewer = asyncio.get_event_loop().run_until_complete(start_kvm_container(
                 host_config.full_hostname,
                 host_config.login_user,
                 password,
@@ -122,7 +123,7 @@ def main():
                 host_config.password_login_attribute_name,
                 host_config.java_version,
                 host_config.session_cookie_key,
-            )
+            ))
             run_vnc_browser(
                 kvm_viewer.url,
                 host_config.full_hostname,

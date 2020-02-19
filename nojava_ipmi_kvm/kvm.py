@@ -6,8 +6,9 @@ import requests
 import signal
 import subprocess
 import sys
-import time
 import uuid
+
+import asyncio
 
 try:
     from typing import List, Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
@@ -77,7 +78,7 @@ class KvmViewer:
         self._already_killed = True
         return self._kill_process()
 
-def start_kvm_container(
+async def start_kvm_container(
     hostname,
     login_user,
     login_password,
@@ -100,17 +101,18 @@ def start_kvm_container(
             command_list.insert(0, "sudo")
         return command_list
 
-    def check_webserver(url):
+    async def check_webserver(url):
         # type: (Text) -> None
         logging.info("Check if '%s' is reachable...", url)
         try:
-            response = requests.head(url)
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, requests.head, url)
             response.raise_for_status()
             logging.info("The url '%s' is reachable.", url)
         except (requests.ConnectionError, requests.HTTPError):
             raise WebserverNotReachableError("The url '{}' is not reachable. Is the host down?".format(url))
 
-    def check_docker():
+    async def check_docker():
         # type: () -> None
         with open(os.devnull, "w") as devnull:
             if not is_command_available("docker"):
@@ -122,14 +124,14 @@ def start_kvm_container(
                     while (
                         subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=devnull, stderr=devnull) != 0
                     ):
-                        time.sleep(1)
+                        await asyncio.sleep(1)
                 else:
                     raise DockerNotCallableError(
                         "`docker` cannot be called. If `docker` needs `sudo`, please set `run_docker_with_sudo = True`"
                         " in your `~/.nojava-ipmi-kvmrc`."
                     )
 
-    def run_docker():
+    async def run_docker():
         # type: () -> Tuple[subprocess.Popen, int]
         # TODO: pass variables as `extra_args` (?)
         vnc_password = generate_temp_password(20)
@@ -212,12 +214,13 @@ def start_kvm_container(
                     terminate_docker(docker_process)
                     raise DockerPortNotReadableError("Cannot read the exposted VNC web port.")
                 except subprocess.CalledProcessError:
-                    time.sleep(1)
-                    # Add await here
+                    await asyncio.sleep(1)
+
         logging.info("Waiting for the Docker container to be up and ready...")
         while True:
             try:
-                response = requests.head("http://localhost:{}".format(vnc_web_port))
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(None, requests.head, "http://localhost:{}".format(vnc_web_port))
                 response.raise_for_status()
                 break
             except (requests.ConnectionError, requests.HTTPError):
@@ -227,8 +230,8 @@ def start_kvm_container(
                             docker_process.returncode
                         )
                     )
-                time.sleep(1)
-                # Here too
+                await asyncio.sleep(1)
+
         logging.info("Docker container is up and running.")
         return docker_process, vnc_web_port, vnc_password
 
@@ -241,9 +244,9 @@ def start_kvm_container(
                 )
         logging.info("Docker container was terminated.")
 
-    check_webserver("http://{}/".format(hostname))
-    check_docker()
-    docker_process, vnc_web_port, vnc_password = run_docker()
+    await check_webserver("http://{}/".format(hostname))
+    await check_docker()
+    docker_process, vnc_web_port, vnc_password = await run_docker()
 
     url = "http://{}:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(external_vnc_dns, vnc_web_port, vnc_web_port, vnc_password)
     logging.info("Url to view kvm console: {}".format(url))
