@@ -91,8 +91,13 @@ async def start_kvm_container(
     session_cookie_key=None,
     external_vnc_dns='localhost',
     docker_port=None,
+    additional_logging=None,
 ):
     # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
+    def log(msg, *args, **kwargs):
+        logging.info(msg, *args, **kwargs)
+        if additional_logging is not None:
+            additional_logging(msg, *args, **kwargs)
 
     DOCKER_CONTAINER_NAME = "nojava-ipmi-kvmrc-{}".format(uuid.uuid4())
     def add_sudo_if_configured(command_list):
@@ -103,12 +108,12 @@ async def start_kvm_container(
 
     async def check_webserver(url):
         # type: (Text) -> None
-        logging.info("Check if '%s' is reachable...", url)
+        log("Check if '%s' is reachable...", url)
         try:
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(None, requests.head, url)
             response.raise_for_status()
-            logging.info("The url '%s' is reachable.", url)
+            log("The url '%s' is reachable.", url)
         except (requests.ConnectionError, requests.HTTPError):
             raise WebserverNotReachableError("The url '{}' is not reachable. Is the host down?".format(url))
 
@@ -120,7 +125,7 @@ async def start_kvm_container(
             if subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=devnull, stderr=devnull) != 0:
                 if running_macos():
                     subprocess.check_call(["open", "-g", "-a", "Docker"])
-                    logging.info("Waiting for the Docker engine to be ready...")
+                    log("Waiting for the Docker engine to be ready...")
                     while (
                         subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=devnull, stderr=devnull) != 0
                     ):
@@ -163,7 +168,7 @@ async def start_kvm_container(
         if allow_insecure_ssl:
             extra_args.insert(0, "-k")
         with open(os.devnull, "w") as devnull:
-            logging.info("Starting the Docker container...")
+            log("Starting the Docker container...")
             docker_process = subprocess.Popen(
                 add_sudo_if_configured(
                     [
@@ -216,7 +221,7 @@ async def start_kvm_container(
                 except subprocess.CalledProcessError:
                     await asyncio.sleep(1)
 
-        logging.info("Waiting for the Docker container to be up and ready...")
+        log("Waiting for the Docker container to be up and ready...")
         while True:
             try:
                 loop = asyncio.get_event_loop()
@@ -232,7 +237,7 @@ async def start_kvm_container(
                     )
                 await asyncio.sleep(1)
 
-        logging.info("Docker container is up and running.")
+        log("Docker container is up and running.")
         return docker_process, vnc_web_port, vnc_password
 
     def terminate_docker(docker_process):
@@ -242,13 +247,13 @@ async def start_kvm_container(
                 subprocess.check_call(
                     add_sudo_if_configured(["docker", "kill", DOCKER_CONTAINER_NAME]), stdout=devnull, stderr=devnull
                 )
-        logging.info("Docker container was terminated.")
+        log("Docker container was terminated.")
 
     await check_webserver("http://{}/".format(hostname))
     await check_docker()
     docker_process, vnc_web_port, vnc_password = await run_docker()
 
     url = "http://{}:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(external_vnc_dns, vnc_web_port, vnc_web_port, vnc_password)
-    logging.info("Url to view kvm console: {}".format(url))
+    log("Url to view kvm console: {}".format(url))
 
     return KvmViewer(url, lambda: terminate_docker(docker_process))
