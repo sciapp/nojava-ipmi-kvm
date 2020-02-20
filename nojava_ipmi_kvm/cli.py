@@ -1,23 +1,12 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import *  # noqa: F401,F403  pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from future import standard_library
-
-standard_library.install_aliases()  # noqa: E402
+#!/usr/bin/env python3
 
 import argparse
-import codecs
 import getpass
 import logging
 import os
 import signal
 import sys
+import asyncio
 
 try:
     from typing import Any  # noqa: F401  # pylint: disable=unused-import
@@ -25,36 +14,18 @@ except ImportError:
     pass
 from .config import config, DEFAULT_CONFIG_FILEPATH, InvalidHostnameError
 from .kvm import (
-    view_kvm_console,
+    start_kvm_container,
     WebserverNotReachableError,
     DockerNotInstalledError,
     DockerNotCallableError,
     DockerTerminatedError,
 )
+from . import browser
 from ._version import __version__, __version_info__  # noqa: F401  # pylint: disable=unused-import
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 if sys.stderr.isatty():
     logging.addLevelName(logging.ERROR, "\033[1;31m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
-
-
-PY2 = sys.version_info.major < 3  # is needed for correct mypy checking
-
-if PY2:
-    stdin = codecs.getreader("utf-8")(sys.stdin)
-else:
-    basestring = str
-    stdin = sys.stdin
-
-
-class AttributeDict(dict):
-    def __getattr__(self, attr):
-        # type: (str) -> Any
-        return self[attr]
-
-    def __setattr__(self, attr, value):
-        # type: (str, Any) -> None
-        self[attr] = value
 
 
 def get_argumentparser():
@@ -86,6 +57,12 @@ def get_argumentparser():
         help="print the default config to stdout and exit",
     )
     parser.add_argument(
+        "--use-gui",
+        action="store_true",
+        dest="use_gui",
+        help="automatically open a PyQt5 browser window. Requires PyQt5 to be installed"
+    )
+    parser.add_argument(
         "-V", "--version", action="store_true", dest="print_version", help="print the version number and exit"
     )
     return parser
@@ -94,17 +71,12 @@ def get_argumentparser():
 def parse_arguments():
     # type: () -> AttributeDict
     parser = get_argumentparser()
-    args = AttributeDict(  # Ensure that all strings are unicode strings (relevant for Python 2 only)
-        {
-            str(key): str(value) if isinstance(value, basestring) else value
-            for key, value in vars(parser.parse_args()).items()
-        }
-    )
+    args = parser.parse_args()
     if not args.print_version and not args.print_default_config:
         if args.hostname is None:
             parser.print_help()
             sys.exit(0)
-        args.config_filepath = os.path.abspath(os.path.expanduser(args.config_filepath))
+        args.config_filepath = args.config_filepath
     return args
 
 
@@ -113,7 +85,7 @@ def read_password():
     if sys.stdin.isatty():
         password = getpass.getpass()
     else:
-        password = stdin.readline().rstrip()
+        password = sys.stdin.readline().rstrip()
     return password
 
 
@@ -135,7 +107,7 @@ def main():
         sys.exit(0)
     else:
         setup_signal_handling()
-        view_kvm_console_exceptions = (
+        start_kvm_container_exceptions = (
             InvalidHostnameError,
             WebserverNotReachableError,
             DockerNotInstalledError,
@@ -146,7 +118,7 @@ def main():
             config.read_config(args.config_filepath)
             host_config = config[args.hostname]
             password = read_password()
-            view_kvm_console(
+            kvm_viewer = asyncio.get_event_loop().run_until_complete(start_kvm_container(
                 host_config.full_hostname,
                 host_config.login_user,
                 password,
@@ -157,10 +129,21 @@ def main():
                 host_config.password_login_attribute_name,
                 host_config.java_version,
                 host_config.session_cookie_key,
-            )
-        except view_kvm_console_exceptions as e:
+            ))
+            if args.use_gui and browser.qt_installed:
+                browser.run_vnc_browser(
+                    kvm_viewer.url,
+                    host_config.full_hostname,
+                    tuple(int(c) for c in config.x_resolution.split("x")),
+                )
+            else:
+                print("Use this url: %s to view kvm." % kvm_viewer.url)
+                print("Press ENTER or CTRL-C to shutdown container and exit")
+                sys.stdin.readline()
+            kvm_viewer.kill_process()
+        except start_kvm_container_exceptions as e:
             logging.error(str(e))
-            for i, exception_class in enumerate(view_kvm_console_exceptions, start=3):
+            for i, exception_class in enumerate(start_kvm_container_exceptions, start=3):
                 if isinstance(e, exception_class):
                     sys.exit(i)
             sys.exit(1)

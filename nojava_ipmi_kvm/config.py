@@ -1,16 +1,5 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-from builtins import *  # noqa: F401,F403  pylint: disable=redefined-builtin,wildcard-import,unused-wildcard-import
-from future import standard_library
-
-standard_library.install_aliases()  # noqa: E402
-
 import copy
+import os
 from configparser import ConfigParser
 
 try:
@@ -145,7 +134,7 @@ class Config(object):
         if config_filepath is not None:
             self._config_filepath = config_filepath
         if self._config_filepath is not None:
-            self._config.read(self._config_filepath)
+            self._config.read(os.path.abspath(os.path.expanduser(self._config_filepath)))
 
     def __getitem__(self, item):
         # type: (Text) -> HostConfig
@@ -160,6 +149,11 @@ class Config(object):
                     item, self._config_filepath
                 )
             )
+
+    def get_servers(self):
+        sections = self._config.sections()
+        sections.remove('general')
+        return sections
 
     @property
     def docker_image(self):

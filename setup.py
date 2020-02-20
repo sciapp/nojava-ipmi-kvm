@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import codecs
 import os
 import runpy
 import subprocess
@@ -19,7 +13,7 @@ def get_version_from_pyfile(version_file="nojava_ipmi_kvm/_version.py"):
 
 def get_install_requires_from_requirements(requirements_filename="requirements.txt"):
     try:
-        with codecs.open(requirements_filename, "r", "utf-8") as requirements_file:
+        with open(requirements_filename, "r", encoding="utf-8") as requirements_file:
             requirements = requirements_file.readlines()
     except OSError:
         import logging
@@ -41,7 +35,7 @@ def get_long_description_from_readme(readme_filename="README.md"):
             logging.warning("Could not convert the readme file to rst.")
     long_description = None
     if os.path.isfile(rst_filename):
-        with codecs.open(rst_filename, "r", "utf-8") as readme_file:
+        with open(rst_filename, "r", encoding="utf-8") as readme_file:
             long_description = readme_file.read()
     if created_tmp_rst:
         os.remove(rst_filename)
@@ -51,13 +45,17 @@ def get_long_description_from_readme(readme_filename="README.md"):
 version = get_version_from_pyfile()
 long_description = get_long_description_from_readme()
 install_requires = get_install_requires_from_requirements()
+install_requires_gui = get_install_requires_from_requirements('requirements-gui.txt')
 
 setup(
     name="nojava-ipmi-kvm",
     version=version,
     packages=find_packages(),
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, <4",
+    python_requires="~=3.5",
     install_requires=install_requires,
+    extras_require={
+        "GUI": install_requires_gui
+    },
     entry_points={"console_scripts": ["nojava-ipmi-kvm = nojava_ipmi_kvm.cli:main"]},
     author="Ingo Heimbach",
     author_email="i.heimbach@fz-juelich.de",
@@ -75,12 +73,8 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 2 :: Only",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
