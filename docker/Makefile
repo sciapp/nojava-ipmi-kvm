@@ -3,7 +3,7 @@ PACKAGE_VERSION := $(shell python -c 'import runpy; print(runpy.run_path("../noj
 upload: build
 	@[ "$$(git symbolic-ref -q HEAD)" == "refs/heads/master" ] || \
 		{ echo "Uploading can only be done on the master branch."; exit 1; }
-	docker login && \
+	docker login docker.io && \
 	docker push "sciapp/nojava-ipmi-kvm:v$(PACKAGE_VERSION)" && \
 	docker push "sciapp/nojava-ipmi-kvm:latest"
 
