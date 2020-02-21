@@ -61,8 +61,11 @@ def is_command_available(command):
     return False
 
 class KvmViewer:
-    def __init__(self, url, kill_process):
+    def __init__(self, url, external_vnc_dns, vnc_web_port, vnc_password, kill_process):
         self._url = url
+        self._external_vnc_dns = external_vnc_dns
+        self._vnc_web_port = vnc_web_port
+        self._vnc_password = vnc_password
         self._kill_process = kill_process
         self._already_killed = False
 
@@ -71,6 +74,18 @@ class KvmViewer:
     @property
     def url(self):
         return self._url
+
+    @property
+    def external_vnc_dns(self):
+        return self._external_vnc_dns
+
+    @property
+    def vnc_web_port(self):
+        return self._vnc_web_port
+
+    @property
+    def vnc_password(self):
+        return self._vnc_password
 
     def kill_process(self):
         if self._already_killed:
@@ -256,4 +271,4 @@ async def start_kvm_container(
     url = "http://{}:{}/vnc.html?host={}&port={}&autoconnect=true&password={}".format(external_vnc_dns, vnc_web_port, external_vnc_dns, vnc_web_port, vnc_password)
     log("Url to view kvm console: {}".format(url))
 
-    return KvmViewer(url, lambda: terminate_docker(docker_process))
+    return KvmViewer(url, external_vnc_dns, vnc_web_port, vnc_password, lambda: terminate_docker(docker_process))
