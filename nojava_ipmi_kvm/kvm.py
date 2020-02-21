@@ -225,7 +225,7 @@ async def start_kvm_container(
         while True:
             try:
                 loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(None, requests.head, "http://localhost:{}".format(vnc_web_port))
+                response = await loop.run_in_executor(None, requests.head, "http://{}:{}".format(external_vnc_dns, vnc_web_port))
                 response.raise_for_status()
                 break
             except (requests.ConnectionError, requests.HTTPError):
@@ -253,7 +253,7 @@ async def start_kvm_container(
     await check_docker()
     docker_process, vnc_web_port, vnc_password = await run_docker()
 
-    url = "http://{}:{}/vnc.html?host=localhost&port={}&autoconnect=true&password={}".format(external_vnc_dns, vnc_web_port, vnc_web_port, vnc_password)
+    url = "http://{}:{}/vnc.html?host={}&port={}&autoconnect=true&password={}".format(external_vnc_dns, vnc_web_port, external_vnc_dns, vnc_web_port, vnc_password)
     log("Url to view kvm console: {}".format(url))
 
     return KvmViewer(url, lambda: terminate_docker(docker_process))
