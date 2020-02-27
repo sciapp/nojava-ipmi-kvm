@@ -220,6 +220,9 @@ def get_java_viewer(
                 break
     if response.status_code != 200 or not session.cookies:
         raise LoginFailedError("Login to {} was not successful.".format(login_url))
+
+    session.headers.update({'referer': login_url}) # Some kvms expect the referer header to be present.
+
     logging.info("Logged in to {} as {}".format(hostname, user))
     # Download the kvm viewer with the previous created session
     response = session.get(download_url)
