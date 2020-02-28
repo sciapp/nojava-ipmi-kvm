@@ -7,6 +7,7 @@ import signal
 import subprocess
 import sys
 import uuid
+import re
 
 import asyncio
 
@@ -107,6 +108,7 @@ async def start_kvm_container(
     external_vnc_dns='localhost',
     docker_port=None,
     additional_logging=None,
+    selected_resolution=None,
 ):
     # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
     def log(msg, *args, **kwargs):
@@ -154,10 +156,15 @@ async def start_kvm_container(
     async def run_docker():
         # type: () -> Tuple[subprocess.Popen, int]
         # TODO: pass variables as `extra_args` (?)
+        nonlocal selected_resolution
         vnc_password = generate_temp_password(20)
+        if selected_resolution is None:
+            selected_resolution = config.x_resolution
+        if not re.match(r'^[1-9][0-9]{2,3}x[1-9][0-9]{2,3}$', selected_resolution):
+            selected_resolution = '1600x1200'
         environment_variables = [
             "-e",
-            "XRES={}".format(config.x_resolution),
+            "XRES={}".format(selected_resolution),
             "-e",
             "JAVA_VERSION={}".format(java_version),
             "-e",
