@@ -104,13 +104,15 @@ async def start_kvm_container(
     user_login_attribute_name,
     password_login_attribute_name,
     java_version,
+    send_post_data_as_json,
+    extra_login_form_fields=None,
     session_cookie_key=None,
     external_vnc_dns='localhost',
     docker_port=None,
     additional_logging=None,
     selected_resolution=None,
 ):
-    # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
+    # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, bool, Text, Optional[Text]) -> None
     def log(msg, *args, **kwargs):
         logging.info(msg, *args, **kwargs)
         if additional_logging is not None:
@@ -185,8 +187,12 @@ async def start_kvm_container(
             password_login_attribute_name,
             hostname,
         ]
+        if extra_login_form_fields is not None:
+            extra_args.extend(("-e", extra_login_form_fields))
         if session_cookie_key is not None:
             extra_args.extend(("-K", session_cookie_key))
+        if send_post_data_as_json:
+            extra_args.insert(0, "-j")
         if allow_insecure_ssl:
             extra_args.insert(0, "-k")
         with open(os.devnull, "w") as devnull:

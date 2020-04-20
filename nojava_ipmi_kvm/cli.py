@@ -128,6 +128,8 @@ def main():
                 host_config.user_login_attribute_name,
                 host_config.password_login_attribute_name,
                 host_config.java_version,
+                host_config.send_post_data_as_json,
+                host_config.extra_login_form_fields,
                 host_config.session_cookie_key,
             ))
             if args.use_gui and browser.qt_installed:

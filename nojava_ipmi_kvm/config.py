@@ -26,9 +26,11 @@ class HostConfig(object):
         user_login_attribute_name,
         password_login_attribute_name,
         java_version,
+        send_post_data_as_json,
+        extra_login_form_fields,
         session_cookie_key,
     ):
-        # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, Optional[Text]) -> None
+        # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, bool, Optional[Text], Optional[Text]) -> None
         self._short_hostname = short_hostname
         self._full_hostname = full_hostname
         self._login_user = login_user
@@ -38,6 +40,8 @@ class HostConfig(object):
         self._user_login_attribute_name = user_login_attribute_name
         self._password_login_attribute_name = password_login_attribute_name
         self._java_version = java_version
+        self._send_post_data_as_json = send_post_data_as_json
+        self._extra_login_form_fields = extra_login_form_fields
         self._session_cookie_key = session_cookie_key
 
     @property
@@ -86,6 +90,16 @@ class HostConfig(object):
         return self._java_version
 
     @property
+    def send_post_data_as_json(self):
+        # type: () -> bool
+        return self._send_post_data_as_json
+
+    @property
+    def extra_login_form_fields(self):
+        # type: () -> Optional[Text]
+        return self._extra_login_form_fields
+
+    @property
     def session_cookie_key(self):
         # type: () -> Optional[Text]
         return self._session_cookie_key
@@ -107,6 +121,8 @@ class Config(object):
         "user_login_attribute_name": "name",
         "password_login_attribute_name": "pwd",
         "java_version": "7u181",
+        "send_post_data_as_json": False,
+        "extra_login_form_fields": None,
         "session_cookie_key": None,
     }  # type: Dict[Text, Any]
 
@@ -141,7 +157,14 @@ class Config(object):
         try:
             host_config = copy.deepcopy(self._default_host_config)
             host_config["short_hostname"] = item
-            host_config.update(self._config[item])
+            type_to_method = {
+                bool: self._config.getboolean,
+                float: self._config.getfloat,
+                int: self._config.getint,
+            }
+            for k, v in self._config[item].items():
+                method = type_to_method.get(type(host_config.get(k, None)), self._config.get)
+                host_config[k] = method(item, k)
             return HostConfig(**host_config)
         except KeyError:
             raise InvalidHostnameError(
