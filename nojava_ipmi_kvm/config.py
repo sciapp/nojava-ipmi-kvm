@@ -141,7 +141,14 @@ class Config(object):
         try:
             host_config = copy.deepcopy(self._default_host_config)
             host_config["short_hostname"] = item
-            host_config.update(self._config[item])
+            type_to_method = {
+                bool: self._config.getboolean,
+                float: self._config.getfloat,
+                int: self._config.getint,
+            }
+            for k, v in self._config[item].items():
+                method = type_to_method.get(type(host_config.get(k, None)), self._config.get)
+                host_config[k] = method(item, k)
             return HostConfig(**host_config)
         except KeyError:
             raise InvalidHostnameError(
