@@ -22,7 +22,7 @@ import urllib.parse
 import sys
 
 try:
-    from typing import Any, Optional, Text  # noqa: F401  # pylint: disable=unused-import
+    from typing import Any, Dict, Optional, Text  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
@@ -55,8 +55,10 @@ DEFAULTS = {
     "do_ssl_verify": True,
     "download_location": "kvm_console.jnlp",
     "endpoints": {"download": "cgi/url_redirect.cgi?url_name=ikvm&url_type=jwsk", "login": "cgi/login.cgi"},
+    "extra_form_fields": {},
     "login_user": "ADMIN",
-}
+    "use_json": False,
+}  # type: Dict[str, Any]
 
 
 class InvalidHostnameError(Exception):
@@ -125,6 +127,22 @@ def get_argumentparser():
         help="download url endpoint (default: %(default)s)",
     )
     parser.add_argument(
+        "-e",
+        "--extra-form-fields",
+        action="store",
+        dest="extra_form_fields",
+        default=",".join("{}:{}".format(key, value) for key, value in DEFAULTS["extra_form_fields"].items()),
+        help="download url endpoint (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-j",
+        "--json",
+        action="store_true",
+        dest="json",
+        default=DEFAULTS["use_json"],
+        help="Post login data as JSON (default: %(default)s)",
+    )
+    parser.add_argument(
         "-k",
         "--insecure",
         action="store_false",
@@ -172,6 +190,8 @@ def parse_arguments():
             args.hostname = match_obj.group(1)
         else:
             raise InvalidHostnameError("{} is not a valid server name.".format(args.hostname))
+        if args.extra_form_fields:
+            args.extra_form_fields = dict([entry.split(":") for entry in args.extra_form_fields.split(",")])
     return args
 
 
@@ -194,18 +214,25 @@ def get_java_viewer(
     ssl_verify,
     user_attribute_name,
     password_attribute_name,
+    extra_form_fields=None,
+    use_json=False,
     session_cookie_key=None,
 ):
-    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text, Optional[Text]) -> None
+    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text, Optional[Dict[Text, Text]], bool, Optional[Text]) -> None
     base_url = "https://{}".format(hostname)
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
     login_url = urllib.parse.urljoin(base_url, login_endpoint)
+    data = {user_attribute_name: user, password_attribute_name: password}
+    if extra_form_fields is not None:
+        data.update(extra_form_fields)
 
     session = requests.Session()
+    if use_json:
+        post_data = {"json": data}
+    else:
+        post_data = {"data": data}
     # Login to get a session cookie
-    response = session.post(
-        login_url, verify=ssl_verify, data={user_attribute_name: user, password_attribute_name: password}
-    )
+    response = session.post(login_url, verify=ssl_verify, **post_data)
     if response.status_code == 200 and not any(
         re.search(r"(session)|(SESSION)", key) for key in session.cookies.keys()
     ):
@@ -221,7 +248,7 @@ def get_java_viewer(
     if response.status_code != 200 or not session.cookies:
         raise LoginFailedError("Login to {} was not successful.".format(login_url))
 
-    session.headers.update({'referer': login_url}) # Some kvms expect the referer header to be present.
+    session.headers.update({"referer": login_url})  # Some kvms expect the referer header to be present.
 
     logging.info("Logged in to {} as {}".format(hostname, user))
     # Download the kvm viewer with the previous created session
@@ -252,6 +279,8 @@ def main():
                 args.ssl_verify,
                 args.user_attribute_name,
                 args.password_attribute_name,
+                args.extra_form_fields,
+                args.json,
                 args.session_cookie_key,
             )
         except get_java_viewer_exceptions as e:
