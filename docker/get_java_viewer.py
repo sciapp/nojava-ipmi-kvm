@@ -268,7 +268,7 @@ def get_java_viewer(
 
     logging.info("Logged in to {} as {}".format(hostname, user))
     # Download the kvm viewer with the previous created session
-    response = session.get(download_url)
+    response = session.get(download_url, verify=ssl_verify)
     if response.status_code != 200:
         raise DownloadFailedError("Downloading the ipmi kvm viewer file from {} failed.".format(download_url))
     logging.info("Successfully downloaded the kvm viewer.")
