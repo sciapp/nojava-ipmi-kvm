@@ -26,11 +26,12 @@ class HostConfig(object):
         user_login_attribute_name,
         password_login_attribute_name,
         java_version,
+        format_jnlp,
         send_post_data_as_json,
         extra_login_form_fields,
         session_cookie_key,
     ):
-        # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, bool, Optional[Text], Optional[Text]) -> None
+        # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, bool, bool, Optional[Text], Optional[Text]) -> None
         self._short_hostname = short_hostname
         self._full_hostname = full_hostname
         self._login_user = login_user
@@ -40,6 +41,7 @@ class HostConfig(object):
         self._user_login_attribute_name = user_login_attribute_name
         self._password_login_attribute_name = password_login_attribute_name
         self._java_version = java_version
+        self._format_jnlp = format_jnlp
         self._send_post_data_as_json = send_post_data_as_json
         self._extra_login_form_fields = extra_login_form_fields
         self._session_cookie_key = session_cookie_key
@@ -90,6 +92,11 @@ class HostConfig(object):
         return self._java_version
 
     @property
+    def format_jnlp(self):
+        # type: () -> bool
+        return self._format_jnlp
+
+    @property
     def send_post_data_as_json(self):
         # type: () -> bool
         return self._send_post_data_as_json
@@ -121,6 +128,7 @@ class Config(object):
         "user_login_attribute_name": "name",
         "password_login_attribute_name": "pwd",
         "java_version": "7u181",
+        "format_jnlp": False,
         "send_post_data_as_json": False,
         "extra_login_form_fields": None,
         "session_cookie_key": None,

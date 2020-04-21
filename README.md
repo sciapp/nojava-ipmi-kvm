@@ -36,6 +36,7 @@ allow_insecure_ssl = False
 user_login_attribute_name = WEBVAR_USERNAME
 password_login_attribute_name = WEBVAR_PASSWORD
 java_version = 7u51
+format_jnlp = False
 send_post_data_as_json = False
 session_cookie_key = SessionCookie
 ```
@@ -51,13 +52,14 @@ session_cookie_key = SessionCookie
 -   `password_login_attribute_name`: Name of the password field in the login form.
 -   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51` and `7u181` are available
     (default: `7u181`).
+-   `format_jnlp`: Replace "{base_url}" and "{session_key}" in the jnlp file (not needed in most cases)
 -   `send_post_data_as_json`: Send the login POST request with JSON data as data payload (not needed in most cases)
 -   `extra_login_form_fields`: Comma-separated list of key/value pairs which will be sent as additional data on the
     login request. Key and value must be separated by colon (example: `method:login`).
 -   `session_cookie_key`: Workaround for web applications that do not set session cookies directly (for example with
     Javascript). If a login attempt does not set a session cookie, the HTTP reply body is scanned for a potential
     session cookie value. If a value is found, it will be stored under the name `session_cookie_key`. In most cases you
-    can simply obmit this configuration key.
+    can simply obmit this configuration key. This config value must also be set if `format_jnlp` is set to true.
 
 
 In addition, you can create a `general` section to configure more general settings, e.g.:
