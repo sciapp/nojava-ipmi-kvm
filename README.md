@@ -11,7 +11,7 @@ This project is based on ideas from [solarkennedy/ipmi-kvm-docker](https://githu
 
 ## Installation
 
-The latest version can be obtained from PyPI and runs with Python 2.7 or 3.3+ (Python 3 is recommended):
+The latest version can be obtained from PyPI and runs with Python 3.5+:
 
 ```bash
 python3 -m pip install nojava-ipmi-kvm
