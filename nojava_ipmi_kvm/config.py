@@ -175,7 +175,7 @@ class Config(object):
 
     def get_servers(self):
         sections = self._config.sections()
-        sections.remove('general')
+        sections.remove("general")
         return sections
 
     @property
