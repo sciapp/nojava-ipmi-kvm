@@ -60,7 +60,7 @@ def get_argumentparser():
         "--use-gui",
         action="store_true",
         dest="use_gui",
-        help="automatically open a PyQt5 browser window. Requires PyQt5 to be installed"
+        help="automatically open a PyQt5 browser window. Requires PyQt5 to be installed",
     )
     parser.add_argument(
         "-V", "--version", action="store_true", dest="print_version", help="print the version number and exit"
@@ -118,25 +118,25 @@ def main():
             config.read_config(args.config_filepath)
             host_config = config[args.hostname]
             password = read_password()
-            kvm_viewer = asyncio.get_event_loop().run_until_complete(start_kvm_container(
-                host_config.full_hostname,
-                host_config.login_user,
-                password,
-                host_config.login_endpoint,
-                host_config.download_endpoint,
-                host_config.allow_insecure_ssl,
-                host_config.user_login_attribute_name,
-                host_config.password_login_attribute_name,
-                host_config.java_version,
-                host_config.send_post_data_as_json,
-                host_config.extra_login_form_fields,
-                host_config.session_cookie_key,
-            ))
+            kvm_viewer = asyncio.get_event_loop().run_until_complete(
+                start_kvm_container(
+                    host_config.full_hostname,
+                    host_config.login_user,
+                    password,
+                    host_config.login_endpoint,
+                    host_config.download_endpoint,
+                    host_config.allow_insecure_ssl,
+                    host_config.user_login_attribute_name,
+                    host_config.password_login_attribute_name,
+                    host_config.java_version,
+                    host_config.send_post_data_as_json,
+                    host_config.extra_login_form_fields,
+                    host_config.session_cookie_key,
+                )
+            )
             if args.use_gui and browser.qt_installed:
                 browser.run_vnc_browser(
-                    kvm_viewer.url,
-                    host_config.full_hostname,
-                    tuple(int(c) for c in config.x_resolution.split("x")),
+                    kvm_viewer.url, host_config.full_hostname, tuple(int(c) for c in config.x_resolution.split("x")),
                 )
             else:
                 print("Use this url: %s to view kvm." % kvm_viewer.url)

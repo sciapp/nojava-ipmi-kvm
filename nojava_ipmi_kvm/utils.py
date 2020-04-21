@@ -1,5 +1,6 @@
 from os import urandom
 
+
 def generate_temp_password(length):
     if not isinstance(length, int) or length < 8:
         raise ValueError("temp password must have positive length")

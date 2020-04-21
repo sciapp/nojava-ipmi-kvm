@@ -7,13 +7,16 @@ except ImportError:
     pass
 
 import sys
+
 try:
     from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
+
     qt_installed = True
 except ImportError:
     qt_installed = False
 
 if qt_installed:
+
     class VncBrowserWidget(QtWebEngineWidgets.QWebEngineView):
         def __init__(self, url):
             # type: (Text) -> None
@@ -24,7 +27,6 @@ if qt_installed:
         def _init_ui(self):
             # type: () -> None
             self.load(QtCore.QUrl(self._url))
-
 
     def run_vnc_browser(url, hostname, window_size):
         # type: (Text, Text, Tuple[int, int]) -> bool
