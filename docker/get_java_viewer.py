@@ -56,12 +56,17 @@ DEFAULTS = {
     "download_location": "kvm_console.jnlp",
     "endpoints": {"download": "cgi/url_redirect.cgi?url_name=ikvm&url_type=jwsk", "login": "cgi/login.cgi"},
     "extra_form_fields": {},
+    "format_jnlp": False,
     "login_user": "ADMIN",
     "use_json": False,
 }  # type: Dict[str, Any]
 
 
 class InvalidHostnameError(Exception):
+    pass
+
+
+class FormatJnlpError(Exception):
     pass
 
 
@@ -133,6 +138,14 @@ def get_argumentparser():
         dest="extra_form_fields",
         default=",".join("{}:{}".format(key, value) for key, value in DEFAULTS["extra_form_fields"].items()),
         help="download url endpoint (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-f",
+        "--format-jnlp",
+        action="store_true",
+        dest="format_jnlp",
+        default=DEFAULTS["format_jnlp"],
+        help='Replace "{base_url}" and "{session_key}" in the jnlp file (default: %(default)s)',
     )
     parser.add_argument(
         "-j",
@@ -215,10 +228,13 @@ def get_java_viewer(
     user_attribute_name,
     password_attribute_name,
     extra_form_fields=None,
+    format_jnlp=False,
     use_json=False,
     session_cookie_key=None,
 ):
-    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text, Optional[Dict[Text, Text]], bool, Optional[Text]) -> None
+    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text, Optional[Dict[Text, Text]], bool, bool, Optional[Text]) -> None
+    if format_jnlp and session_cookie_key is None:
+        raise FormatJnlpError("Formatting JNLP file requested but no session cookie key given!")
     base_url = "https://{}".format(hostname)
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
     login_url = urllib.parse.urljoin(base_url, login_endpoint)
@@ -256,8 +272,14 @@ def get_java_viewer(
     if response.status_code != 200:
         raise DownloadFailedError("Downloading the ipmi kvm viewer file from {} failed.".format(download_url))
     logging.info("Successfully downloaded the kvm viewer.")
+    jnlp_filecontent = response.text
+    if format_jnlp:
+        jnlp_filecontent = jnlp_filecontent.format(
+            base_url=base_url, session_key=session.cookies.get(session_cookie_key)
+        )
+        logging.info("Formatted the JNLP file.")
     with open(download_location, "w", encoding="utf-8") as f:
-        f.write(response.text)
+        f.write(jnlp_filecontent)
 
 
 def main():
@@ -280,6 +302,7 @@ def main():
                 args.user_attribute_name,
                 args.password_attribute_name,
                 args.extra_form_fields,
+                args.format_jnlp,
                 args.json,
                 args.session_cookie_key,
             )
