@@ -3,8 +3,8 @@ LABEL maintainer="Ingo Heimbach <i.heimbach@fz-juelich.de>"
 
 # Install needed packages and Java dependencies (second `apt-get install` call)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends net-tools curl ca-certificates tar xvfb x11vnc supervisor fluxbox \
-                                               python-numpy python-pip python-wheel python-pyquery && \
+    apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools python-numpy python-pip \
+                                               python-pyquery python-wheel supervisor tar x11vnc xvfb && \
     apt-get install -y --no-install-recommends ca-certificates-java initscripts java-common libasound2 \
                                                libatk-wrapper-java-jni libatk1.0-0 libc6 libcairo2 libcups2 \
                                                libfontconfig1 libfreetype6 libgcc1 libgdk-pixbuf2.0-0 libgif4 \
