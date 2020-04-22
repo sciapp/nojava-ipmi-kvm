@@ -50,8 +50,8 @@ session_cookie_key = SessionCookie
 -   `user_login_attribute_name`: Name of the user login field in the login form (use the web inspector of your favorite
     browser to find out the field names).
 -   `password_login_attribute_name`: Name of the password field in the login form.
--   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51` and `7u181` are available
-    (default: `7u181`).
+-   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u181`, `8u91` and `8u242`
+    are available (default: `7u181`).
 -   `format_jnlp`: Replace "{base_url}" and "{session_key}" in the jnlp file (not needed in most cases)
 -   `send_post_data_as_json`: Send the login POST request with JSON data as data payload (not needed in most cases)
 -   `extra_login_form_fields`: Comma-separated list of key/value pairs which will be sent as additional data on the

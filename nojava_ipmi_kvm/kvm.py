@@ -211,11 +211,11 @@ async def start_kvm_container(
         log("Starting the Docker container...")
         docker_process = subprocess.Popen(
             add_sudo_if_configured(
-                ["docker", "run", "--rm", "-i", "-v", "/etc/hosts:/etc/hosts:ro", "--name", DOCKER_CONTAINER_NAME,]
+                ["docker", "run", "--rm", "-i", "-v", "/etc/hosts:/etc/hosts:ro", "--name", DOCKER_CONTAINER_NAME]
             )
             + environment_variables
-            + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port),])
-            + [config.docker_image.format(version=__version__)]
+            + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port)])
+            + [config.docker_image.format(version=__version__, java_major_version=java_version.split("u")[0])]
             + extra_args,
             stdin=subprocess.PIPE,
             stdout=subprocess_output,
