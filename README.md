@@ -88,7 +88,8 @@ container will be shutdown automatically after to you closed the VNC window or s
 Options:
 
 ```
-usage: nojava-ipmi-kvm [-h] [-f CONFIG_FILEPATH] [--print-default-config] [-V]
+usage: nojava-ipmi-kvm [-h] [--debug] [-f CONFIG_FILEPATH] [-g]
+                       [--print-default-config] [-V]
                        [hostname]
 
 nojava-ipmi-kvm is a utility to access Java based ipmi kvm consoles without a local java installation.
@@ -100,8 +101,11 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --debug               print debug messages
   -f CONFIG_FILEPATH, --config-file CONFIG_FILEPATH
                         login user (default: ~/.nojava-ipmi-kvmrc)
+  -g, --use-gui         automatically open a PyQt5 browser window. Requires
+                        PyQt5 to be installed
   --print-default-config
                         print the default config to stdout and exit
   -V, --version         print the version number and exit
