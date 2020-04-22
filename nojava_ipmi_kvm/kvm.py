@@ -202,7 +202,7 @@ async def start_kvm_container(
             extra_args.extend(("-e", extra_login_form_fields))
         if session_cookie_key is not None:
             extra_args.extend(("-K", session_cookie_key))
-        if send_post_data_as_json:
+        if format_jnlp:
             extra_args.insert(0, "-f")
         if send_post_data_as_json:
             extra_args.insert(0, "-j")
