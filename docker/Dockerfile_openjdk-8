@@ -3,9 +3,9 @@ LABEL maintainer="Ingo Heimbach <i.heimbach@fz-juelich.de>"
 
 # Install needed packages and Java dependencies (second `apt-get install` call)
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools python-numpy python-pip \
-                                               python-pyquery python-setuptools python-wheel supervisor tar x11vnc \
-                                               xvfb && \
+    apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools procps python-numpy \
+                                               python-pip python-pyquery python-setuptools python-wheel supervisor tar \
+                                               x11vnc xvfb && \
     apt-get install -y --no-install-recommends adwaita-icon-theme ca-certificates ca-certificates-java \
                                                dconf-gsettings-backend dconf-service fontconfig fontconfig-config \
                                                fonts-dejavu-core glib-networking glib-networking-common \
