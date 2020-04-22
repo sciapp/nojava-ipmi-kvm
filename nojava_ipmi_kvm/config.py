@@ -115,7 +115,7 @@ class HostConfig(object):
 class Config(object):
     _default_config = {
         "general": {
-            "docker_image": "sciapp/nojava-ipmi-kvm:v{version}",
+            "docker_image": "sciapp/nojava-ipmi-kvm:v{version}-openjdk-{java_major_version}",
             "run_docker_with_sudo": False,
             "x_resolution": "1024x768",
         }
