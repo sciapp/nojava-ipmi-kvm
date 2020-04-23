@@ -19,6 +19,18 @@ python3 -m pip install nojava-ipmi-kvm
 
 [Install Docker](https://www.docker.com/) on your local machine if not done already.
 
+If you run an Arch-based system, you can also install `nojava-ipmi-kvm` from the [AUR](https://aur.archlinux.org/):
+
+```bash
+yay -S nojava-ipmi-kvm-docker
+```
+
+If you prefer Podman to Docker use the Podman version instead:
+
+```bash
+yay -S nojava-ipmi-kvm-podman
+```
+
 ## Usage
 
 ### Configuration file
