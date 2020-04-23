@@ -208,6 +208,8 @@ async def start_kvm_container(
             extra_args.insert(0, "-j")
         if allow_insecure_ssl:
             extra_args.insert(0, "-k")
+        java_provider = "oraclejre" if java_version.endswith("-oracle") else "openjdk"
+        java_major_version = java_version.split("u")[0]
         log("Starting the Docker container...")
         docker_process = subprocess.Popen(
             add_sudo_if_configured(
@@ -215,7 +217,11 @@ async def start_kvm_container(
             )
             + environment_variables
             + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port)])
-            + [config.docker_image.format(version=__version__, java_major_version=java_version.split("u")[0])]
+            + [
+                config.docker_image.format(
+                    version=__version__, java_provider=java_provider, java_major_version=java_major_version
+                )
+            ]
             + extra_args,
             stdin=subprocess.PIPE,
             stdout=subprocess_output,
