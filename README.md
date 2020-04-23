@@ -50,8 +50,9 @@ session_cookie_key = SessionCookie
 -   `user_login_attribute_name`: Name of the user login field in the login form (use the web inspector of your favorite
     browser to find out the field names).
 -   `password_login_attribute_name`: Name of the password field in the login form.
--   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u181`, `8u91` and `8u242`
-    are available (default: `7u181`).
+-   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u181`, `8u91`, `8u242` and
+    `8u251-oracle` are available (default: `7u181`). The `-oracle` version is a special case which requires to build a
+    Docker image yourself because of license restrictions. See [Using Oracle Java](#using-oracle-java) for more details.
 -   `format_jnlp`: Replace "{base_url}" and "{session_key}" in the jnlp file (not needed in most cases)
 -   `send_post_data_as_json`: Send the login POST request with JSON data as data payload (not needed in most cases)
 -   `extra_login_form_fields`: Comma-separated list of key/value pairs which will be sent as additional data on the
@@ -110,6 +111,34 @@ optional arguments:
                         print the default config to stdout and exit
   -V, --version         print the version number and exit
 ```
+
+
+## Using Oracle Java
+
+Because of license restrictions we cannot provide pre-built docker images for Oracle Java. However, you can build an
+Oracle Java image yourself:
+
+1. Clone this repository:
+
+   ```bash
+   git clone git@github.com:sciapp/nojava-ipmi-kvm.git
+   ```
+
+2. Visit [the Java download page](https://www.java.com/en/download/manual.jsp) and get the *Linux x64* tar archive of
+   Oracle Java version `8u251`. Save it to the `docker` subdirectory of the previously cloned repository as
+   `jre-8u251-linux-x64.tar.gz`.
+
+3. Open a terminal and go to the root of the project clone. Run
+
+   ```bash
+   git pull
+   make build-oracle
+   ```
+
+   to build a Docker image with Oracle Java. When you install an updated version of `nojava-ipmi-kvm` repeat these
+   commands.
+
+4. Use `java_version = 8u251-oracle` in your `~/.nojava-ipmi-kvmrc` configuration.
 
 ## Command line completion
 
