@@ -1,4 +1,5 @@
-PACKAGE_VERSION := $(shell python -c 'import runpy; print(runpy.run_path("../nojava_ipmi_kvm/_version.py")["__version__"])')
+PYTHON = python
+PACKAGE_VERSION := $(shell $(PYTHON) -c 'import runpy; print(runpy.run_path("../nojava_ipmi_kvm/_version.py")["__version__"])')
 
 default:
 	@>&2 echo "No default target available, please select one of these: \"build-openjdk\", \"build-oracle\"."
