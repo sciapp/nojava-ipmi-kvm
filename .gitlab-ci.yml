@@ -33,7 +33,7 @@ deploy-to-dockerhub:
   - docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_SECRET}"
   - for openjdk_version in 7 8; do
       docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}-openjdk-${openjdk_version}";
-      docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest-openjdk-$${openjdk_version}";
+      docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest-openjdk-${openjdk_version}";
     done
   only:
   - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm
