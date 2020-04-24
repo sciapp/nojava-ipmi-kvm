@@ -1,15 +1,69 @@
 stages:
 - deploy
+- deploy-to-aur
+
+deploy-to-github:
+  stage: deploy
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/deploy
+  variables:
+    GIT_STRATEGY: none
+  only:
+  - master@Scientific-IT-Systems/administration/nojava-ipmi-kvm
+  - develop@Scientific-IT-Systems/administration/nojava-ipmi-kvm
+  - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm
+  script:
+  - mkdir --mode=700 ~/.ssh/
+  - (umask 0377 && echo "${GITHUB_DEPLOY_KEY}" > ~/.ssh/id_rsa
+                && echo "github.com ${GITHUB_HOST_KEY}" >> ~/.ssh/known_hosts)
+  - git clone --mirror "${CI_REPOSITORY_URL}" "${CI_PROJECT_NAME}_mirror"
+  - cd "${CI_PROJECT_NAME}_mirror";
+    git push --mirror "git@github.com:sciapp/${CI_PROJECT_NAME}.git";
+    cd ..
+
+deploy-to-dockerhub:
+  image: docker:latest
+  stage: deploy
+  variables:
+    DOCKER_DRIVER: overlay2
+  services:
+  - docker:dind
+  script:
+  - apk add --no-cache make
+  - make -C docker build-openjdk
+  - docker login -u "${DOCKERHUB_USER}" -p "${DOCKERHUB_SECRET}"
+  - for openjdk_version in 7 8; do
+      docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:${CI_COMMIT_TAG}-openjdk-${openjdk_version}";
+      docker push "${DOCKERHUB_NAMESPACE}/${CI_PROJECT_NAME}:latest-openjdk-$${openjdk_version}";
+    done
+  only:
+  - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm
+
+deploy-to-pypi:
+  stage: deploy
+  image: python:3-slim
+  only:
+  - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm
+  script:
+  - pip install twine
+  - echo "[distutils]"                    > ~/.pypirc;
+    echo "index-servers ="               >> ~/.pypirc;
+    echo "    pypi"                      >> ~/.pypirc;
+    echo "[pypi]"                        >> ~/.pypirc;
+    echo "username = __token__"          >> ~/.pypirc;
+    echo "password = ${PYPI_DEPLOY_KEY}" >> ~/.pypirc;
+  - python setup.py sdist
+  - python setup.py bdist_wheel
+  - twine upload dist/*
 
 deploy-to-aur:
-  stage: deploy
-  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/$CI_JOB_NAME
+  stage: deploy-to-aur
+  image: iffregistry.fz-juelich.de/docker-images/gr-build-images/${CI_JOB_NAME}
   only:
   - tags@Scientific-IT-Systems/administration/nojava-ipmi-kvm
   script:
   - mkdir --mode=700 ~/.ssh/
-  - (umask 0377 && echo "$AUR_PRIVATE_KEY" > ~/.ssh/id_rsa
-                && echo "aur.archlinux.org $AUR_HOST_KEY" >> ~/.ssh/known_hosts)
+  - (umask 0377 && echo "${AUR_PRIVATE_KEY}" > ~/.ssh/id_rsa
+                && echo "aur.archlinux.org ${AUR_HOST_KEY}" >> ~/.ssh/known_hosts)
   - for suffix in docker podman; do
       git clone "ssh://aur@aur.archlinux.org/nojava-ipmi-kvm-${suffix}.git" "nojava-ipmi-kvm-${suffix}-aur";
       cd "nojava-ipmi-kvm-${suffix}-aur";
