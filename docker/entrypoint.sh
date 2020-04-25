@@ -24,14 +24,21 @@ if [[ "${JAVA_VERSION%-oracle}" != "${JAVA_VERSION}" ]]; then
     ln -s "/opt/oracle/jre1.${JAVA_MAJOR_VERSION}.0_${JAVA_PATCH_LEVEL}/bin/javaws" /usr/local/bin/javaws || return
     export PATH="/opt/oracle/jre1.${JAVA_MAJOR_VERSION}.0_${JAVA_PATCH_LEVEL}/bin:${PATH}"
 else
+    JAVA_VERSION="${JAVA_VERSION%-openjdk}"
+    JAVA_MAJOR_VERSION="${JAVA_VERSION%%u*}"
     pushd "/opt/java_packages/${JAVA_VERSION}" >/dev/null 2>&1 && \
     dpkg -i *.deb && \
     popd >/dev/null 2>&1 && \
     pushd "/opt/icedtea" >/dev/null 2>&1 && \
     dpkg -i *.deb && \
+    popd >/dev/null 2>&1
     itweb-settings set deployment.security.level ALLOW_UNSIGNED
     itweb-settings set deployment.security.jsse.hostmismatch.warning false
-    itweb-settings set deployment.manifest.attributes.check false
+    if [[ "${JAVA_MAJOR_VERSION}" -eq 7 ]]; then
+        itweb-settings set deployment.manifest.attributes.check false
+    else
+        itweb-settings set deployment.manifest.attributes.check NONE
+    fi
     #itweb-settings set deployment.security.notinca.warning false
     itweb-settings set deployment.security.expired.warning false
     mkdir -p /root/.config/icedtea-web/security/
