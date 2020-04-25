@@ -5,6 +5,8 @@ import os
 from pyquery import PyQuery as pq
 import requests
 
+java_security_dir = os.environ["JAVA_SECURITY_DIR"]
+
 xml = pq(filename="/tmp/launch.jnlp")
 
 codebase = xml[0].attrib["codebase"]
@@ -37,8 +39,8 @@ for jar in xml.find("resources > jar"):
 
     os.system("bash -c 'keytool -printcert -jarfile /tmp/jnlp_certs_{}.jar -rfc > /tmp/jnlp_certs_{}.pem'".format(n, n))
     os.system(
-        "keytool -importcert -noprompt -file /tmp/jnlp_certs_{}.pem -keystore /root/.config/icedtea-web/security/trusted.certs -alias jnlp_certs_{} -storepass changeit".format(
-            n, n
+        "keytool -importcert -noprompt -file /tmp/jnlp_certs_{}.pem -keystore {}/trusted.certs -alias jnlp_certs_{} -storepass changeit".format(
+            n, java_security_dir, n
         )
     )
     n += 1
