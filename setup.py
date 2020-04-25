@@ -1,8 +1,5 @@
-# -*- coding: utf-8 -*-
-
 import os
 import runpy
-import subprocess
 from setuptools import setup, find_packages
 
 
@@ -23,22 +20,10 @@ def get_install_requires_from_requirements(requirements_filename="requirements.t
 
 
 def get_long_description_from_readme(readme_filename="README.md"):
-    rst_filename = "{}.rst".format(os.path.splitext(os.path.basename(readme_filename))[0])
-    created_tmp_rst = False
-    if not os.path.isfile(rst_filename):
-        try:
-            subprocess.check_call(["pandoc", readme_filename, "-t", "rst", "-o", rst_filename])
-            created_tmp_rst = True
-        except (OSError, subprocess.CalledProcessError):
-            import logging
-
-            logging.warning("Could not convert the readme file to rst.")
     long_description = None
-    if os.path.isfile(rst_filename):
-        with open(rst_filename, "r", encoding="utf-8") as readme_file:
+    if os.path.isfile(readme_filename):
+        with open(readme_filename, "r", encoding="utf-8") as readme_file:
             long_description = readme_file.read()
-    if created_tmp_rst:
-        os.remove(rst_filename)
     return long_description
 
 
@@ -59,6 +44,7 @@ setup(
     author_email="i.heimbach@fz-juelich.de",
     description="Access Java based ipmi kvm consoles without a local Java installation.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     license="MIT",
     url="https://github.com/sciapp/nojava-ipmi-kvm",
     keywords=["ipmi", "kvm", "vnc"],
