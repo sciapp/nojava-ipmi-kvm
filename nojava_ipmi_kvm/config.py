@@ -19,6 +19,7 @@ class HostConfig(object):
         self,
         short_hostname,
         full_hostname,
+        skip_login,
         login_user,
         login_endpoint,
         download_endpoint,
@@ -31,9 +32,10 @@ class HostConfig(object):
         extra_login_form_fields,
         session_cookie_key,
     ):
-        # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, bool, bool, Optional[Text], Optional[Text]) -> None
+        # type: (Text, Text, bool, Text, Text, Text, bool, Text, Text, Text, bool, bool, Optional[Text], Optional[Text]) -> None
         self._short_hostname = short_hostname
         self._full_hostname = full_hostname
+        self._skip_login = skip_login
         self._login_user = login_user
         self._login_endpoint = login_endpoint
         self._download_endpoint = download_endpoint
@@ -55,6 +57,11 @@ class HostConfig(object):
     def full_hostname(self):
         # type: () -> Text
         return self._full_hostname
+
+    @property
+    def skip_login(self):
+        # type: () -> bool
+        return self._skip_login
 
     @property
     def login_user(self):
@@ -121,6 +128,7 @@ class Config(object):
         }
     }  # type: Dict[Text, Dict[Text, Any]]
     _default_host_config = {
+        "skip_login": False,
         "login_user": "ADMIN",
         "login_endpoint": "cgi/login.cgi",
         "download_endpoint": "cgi/url_redirect.cgi?url_name=ikvm&url_type=jwsk",

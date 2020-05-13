@@ -58,6 +58,7 @@ DEFAULTS = {
     "extra_form_fields": {},
     "format_jnlp": False,
     "login_user": "ADMIN",
+    "skip_login": False,
     "use_json": False,
 }  # type: Dict[str, Any]
 
@@ -164,6 +165,14 @@ def get_argumentparser():
         help="allow insecure SSL connections (-> SSL without certificate verification) (default: %(default)s)",
     )
     parser.add_argument(
+        "-s",
+        "--skip-login",
+        action="store_true",
+        dest="skip_login",
+        default=DEFAULTS["skip_login"],
+        help="do not attempt to log in, only download (default: %(default)s)",
+    )
+    parser.add_argument(
         "-U",
         "--user-attribute",
         action="store",
@@ -219,6 +228,7 @@ def read_password():
 
 def get_java_viewer(
     hostname,
+    skip_login,
     user,
     password,
     download_location,
@@ -232,41 +242,45 @@ def get_java_viewer(
     use_json=False,
     session_cookie_key=None,
 ):
-    # type: (Text, Text, Text, Text, Text, Text, bool, Text, Text, Optional[Dict[Text, Text]], bool, bool, Optional[Text]) -> None
+    # type: (Text, bool, Optional[Text], Text, Text, Text, Text, bool, Text, Text, Optional[Dict[Text, Text]], bool, bool, Optional[Text]) -> None
     if format_jnlp and session_cookie_key is None:
         raise FormatJnlpError("Formatting JNLP file requested but no session cookie key given!")
     base_url = "https://{}".format(hostname)
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
-    login_url = urllib.parse.urljoin(base_url, login_endpoint)
-    data = {user_attribute_name: user, password_attribute_name: password}
-    if extra_form_fields is not None:
-        data.update(extra_form_fields)
-
     session = requests.Session()
-    if use_json:
-        post_data = {"json": data}
-    else:
-        post_data = {"data": data}
+
+    def do_login():
+        # type: () -> None
+        assert password is not None
+        login_url = urllib.parse.urljoin(base_url, login_endpoint)
+        data = {user_attribute_name: user, password_attribute_name: password}
+        if extra_form_fields is not None:
+            data.update(extra_form_fields)
+        if use_json:
+            post_data = {"json": data}
+        else:
+            post_data = {"data": data}
+        response = session.post(login_url, verify=ssl_verify, **post_data)
+        if response.status_code == 200 and not any(
+            re.search(r"(session)|(SESSION)", key) for key in session.cookies.keys()
+        ):
+            session_cookie_regex = re.compile(r"'?(\w*(?:session)|(?:SESSION)\w*)'?\s*[:=]\s*'(\w+)'")
+            for line in response.text.split("\n"):
+                match_obj = session_cookie_regex.search(line)
+                if match_obj is not None:
+                    if session_cookie_key is None:
+                        session_cookie_key = match_obj.group(1)
+                    session_cookie_value = match_obj.group(2)
+                    session.cookies.set(session_cookie_key, session_cookie_value)
+                    break
+        if response.status_code != 200 or not session.cookies:
+            raise LoginFailedError("Login to {} was not successful.".format(login_url))
+        session.headers.update({"referer": login_url})  # Some kvms expect the referer header to be present.
+        logging.info("Logged in to {} as {}".format(hostname, user))
+
     # Login to get a session cookie
-    response = session.post(login_url, verify=ssl_verify, **post_data)
-    if response.status_code == 200 and not any(
-        re.search(r"(session)|(SESSION)", key) for key in session.cookies.keys()
-    ):
-        session_cookie_regex = re.compile(r"'?(\w*(?:session)|(?:SESSION)\w*)'?\s*[:=]\s*'(\w+)'")
-        for line in response.text.split("\n"):
-            match_obj = session_cookie_regex.search(line)
-            if match_obj is not None:
-                if session_cookie_key is None:
-                    session_cookie_key = match_obj.group(1)
-                session_cookie_value = match_obj.group(2)
-                session.cookies.set(session_cookie_key, session_cookie_value)
-                break
-    if response.status_code != 200 or not session.cookies:
-        raise LoginFailedError("Login to {} was not successful.".format(login_url))
-
-    session.headers.update({"referer": login_url})  # Some kvms expect the referer header to be present.
-
-    logging.info("Logged in to {} as {}".format(hostname, user))
+    if not skip_login:
+        do_login()
     # Download the kvm viewer with the previous created session
     response = session.get(download_url, verify=ssl_verify)
     if response.status_code != 200:
@@ -290,9 +304,12 @@ def main():
     else:
         get_java_viewer_exceptions = (LoginFailedError, DownloadFailedError, IOError)
         try:
-            password = read_password()
+            password = None
+            if not args.skip_login:
+                password = read_password()
             get_java_viewer(
                 args.hostname,
+                args.skip_login,
                 args.user,
                 password,
                 args.download_location,

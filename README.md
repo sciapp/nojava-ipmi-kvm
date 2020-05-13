@@ -41,6 +41,7 @@ for example:
 ```
 [myhostkvm]
 full_hostname = myhostkvm.org
+skip_login = False
 login_user = ADMIN
 login_endpoint = rpc/WEBSES/create.asp
 download_endpoint = Java/jviewer.jnlp
@@ -54,6 +55,8 @@ session_cookie_key = SessionCookie
 ```
 
 -   `full_hostname`: Fully qualified name of your KVM host
+-   `skip_login`: Skip the login to the KVM host (should be `False` in most cases). If the login is skipped, you can
+    omit `login_user`, `login_endpoint`, `user_login_attribute_name` and `password_login_attribute_name`.
 -   `login_user`: User to login to the web admin view (default: `ADMIN`)
 -   `login_endpoint`: Relative POST url of the login form. Is needed to create a login session.
 -   `download_endpoint`: Relative download url of the Java KVM viewer.
