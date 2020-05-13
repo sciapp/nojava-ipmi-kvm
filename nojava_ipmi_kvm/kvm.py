@@ -94,6 +94,7 @@ class KvmViewer:
 
 async def start_kvm_container(
     hostname,
+    skip_login,
     login_user,
     login_password,
     login_endpoint,
@@ -202,6 +203,8 @@ async def start_kvm_container(
             extra_args.extend(("-e", extra_login_form_fields))
         if session_cookie_key is not None:
             extra_args.extend(("-K", session_cookie_key))
+        if skip_login:
+            extra_args.insert(0, "-s")
         if format_jnlp:
             extra_args.insert(0, "-f")
         if send_post_data_as_json:
@@ -264,11 +267,19 @@ async def start_kvm_container(
                 break
             except (requests.ConnectionError, requests.HTTPError):
                 if docker_process.poll() is not None:
-                    raise DockerTerminatedError(
-                        "Docker terminated with return code {}. Maybe you entered a wrong password?".format(
-                            docker_process.returncode
+                    if not skip_login:
+                        raise DockerTerminatedError(
+                            "Docker terminated with return code {}. Maybe you entered a wrong password?".format(
+                                docker_process.returncode
+                            )
                         )
-                    )
+                    else:
+                        raise DockerTerminatedError(
+                            (
+                                "Docker terminated with return code {}."
+                                + " Maybe you configured a wrong download endpoint or need a login?"
+                            ).format(docker_process.returncode)
+                        )
                 await asyncio.sleep(1)
 
         log("Docker container is up and running.")

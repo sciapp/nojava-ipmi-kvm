@@ -128,10 +128,13 @@ def main():
         try:
             config.read_config(args.config_filepath)
             host_config = config[args.hostname]
-            password = read_password()
+            password = None
+            if not host_config.skip_login:
+                password = read_password()
             kvm_viewer = asyncio.get_event_loop().run_until_complete(
                 start_kvm_container(
                     host_config.full_hostname,
+                    host_config.skip_login,
                     host_config.login_user,
                     password,
                     host_config.login_endpoint,
