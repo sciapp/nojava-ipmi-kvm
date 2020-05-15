@@ -37,6 +37,9 @@ RUN apt-get update && \
                                                libxmuu1 libxpm4 libxrandr2 libxrender1 libxshmfence1 libxt6 libxtst6 \
                                                libxv1 libxxf86dga1 libxxf86vm1 openssl shared-mime-info ucf x11-common \
                                                x11-utils xkb-data && \
+    # Add support for asian characters
+    apt-get install -y --no-install-recommends onts-arphic-ukai fonts-arphic-uming fonts-ipafont-mincho \
+                                               fonts-ipafont-gothic fonts-unfonts-core && \
     pip install future requests websockify && \
     rm -rf /var/lib/apt/lists/*
 

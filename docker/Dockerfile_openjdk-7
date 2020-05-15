@@ -13,6 +13,9 @@ RUN apt-get update && \
                                                libpcsclite1 libpng12-0 libpulse0 libsctp1 libstdc++6 libx11-6 \
                                                libxcomposite1 libxext6 libxi6 libxinerama1 libxrandr2 libxrender1 \
                                                libxtst6 tzdata-java zlib1g && \
+    # Add support for asian characters
+    apt-get install -y --no-install-recommends onts-arphic-ukai fonts-arphic-uming fonts-ipafont-mincho \
+                                               fonts-ipafont-gothic fonts-unfonts-core && \
     pip install future requests websockify && \
     rm -rf /var/lib/apt/lists/*
 
