@@ -49,12 +49,12 @@ RUN NOVNC_VERSION="1.1.0" && \
     ln -s "/opt/noVNC-${NOVNC_VERSION}/utils/launch.sh" /usr/local/bin/launch_novnc && \
     rm -f /tmp/novnc.tar.gz
 
-COPY jre-8u251-linux-x64.tar.gz /opt/java_packages/8u251/jre-8u251-linux-x64.tar.gz
+COPY jre-7u80-linux-x64.tar.gz /opt/java_packages/7u80/jre-7u80-linux-x64.tar.gz
 
 COPY entrypoint.sh /usr/local/bin/docker-entrypoint
 COPY get_java_viewer.py /usr/local/bin/get_java_viewer
 COPY import_jnlp_cert.py /usr/local/bin/import_jnlp_cert.py
-COPY supervisord_oraclejre-8.conf /etc/supervisor/conf.d/supervisord.conf
+COPY supervisord_oraclejre-7.conf /etc/supervisor/conf.d/supervisord.conf
 
 WORKDIR /root/
 
