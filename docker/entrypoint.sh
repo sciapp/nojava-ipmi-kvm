@@ -21,7 +21,11 @@ if [[ "${JAVA_VERSION%-oracle}" != "${JAVA_VERSION}" ]]; then
     JAVA_PATCH_LEVEL="${JAVA_VERSION#*u}"
     mkdir -p /opt/oracle && \
     tar -C/opt/oracle/ -xvf "/opt/java_packages/${JAVA_VERSION}/jre-${JAVA_VERSION}-linux-x64.tar.gz" && \
-    ln -s "/opt/oracle/jre1.${JAVA_MAJOR_VERSION}.0_${JAVA_PATCH_LEVEL}/bin/javaws" /usr/local/bin/javaws || return
+    ln -s "/opt/oracle/jre1.${JAVA_MAJOR_VERSION}.0_${JAVA_PATCH_LEVEL}/bin/javaws" /usr/local/bin/javaws && \
+    # Set the lowest possible security level
+    # But first, call `import` to init the config directory structure (command will fail without X, but this is OK)
+    javaws -import /tmp/launch.jnlp 2>/dev/null
+    echo "deployment.security.level=MEDIUM" >> "/root/.java/deployment/deployment.properties" || return
     export PATH="/opt/oracle/jre1.${JAVA_MAJOR_VERSION}.0_${JAVA_PATCH_LEVEL}/bin:${PATH}"
     export JAVA_SECURITY_DIR="/root/.java/deployment/security"
 else
