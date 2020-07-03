@@ -65,9 +65,10 @@ session_cookie_key = SessionCookie
 -   `user_login_attribute_name`: Name of the user login field in the login form (use the web inspector of your favorite
     browser to find out the field names).
 -   `password_login_attribute_name`: Name of the password field in the login form.
--   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u181`, `8u91`, `8u242` and
-    `8u251-oracle` are available (default: `7u181`). The `-oracle` version is a special case which requires to build a
-    Docker image yourself because of license restrictions. See [Using Oracle Java](#using-oracle-java) for more details.
+-   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u181`, `8u91`, `8u242`,
+    `7u80-oracle` and `8u251-oracle` are available (default: `7u181`). The `-oracle` versions are special cases which
+    require to build a Docker image yourself because of license restrictions. See [Using Oracle
+    Java](#using-oracle-java) for more details.
 -   `format_jnlp`: Replace "{base_url}" and "{session_key}" in the jnlp file (not needed in most cases)
 -   `send_post_data_as_json`: Send the login POST request with JSON data as data payload (not needed in most cases)
 -   `extra_login_form_fields`: Comma-separated list of key/value pairs which will be sent as additional data on the
@@ -141,7 +142,9 @@ Oracle Java image yourself:
 
 2. Visit [the Java download page](https://www.java.com/en/download/manual.jsp) and get the *Linux x64* tar archive of
    Oracle Java version `8u251`. Save it to the `docker` subdirectory of the previously cloned repository as
-   `jre-8u251-linux-x64.tar.gz`.
+   `jre-8u251-linux-x64.tar.gz`. If you would like to also use Oracle Java 7, get `jre-7u80-linux-x64.tar.gz` from
+   [Oracle's Java archive](https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html) (this
+   requires an free Oracle account).
 
 3. Open a terminal and go to the root of the project clone. Run
 
@@ -153,7 +156,7 @@ Oracle Java image yourself:
    to build a Docker image with Oracle Java. When you install an updated version of `nojava-ipmi-kvm` repeat these
    commands.
 
-4. Use `java_version = 8u251-oracle` in your `~/.nojava-ipmi-kvmrc` configuration.
+4. Use `java_version = 8u251-oracle` (or `7u80-oracle`) in your `~/.nojava-ipmi-kvmrc` configuration.
 
 ## Command line completion
 
