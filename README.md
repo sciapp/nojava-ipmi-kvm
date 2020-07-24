@@ -65,9 +65,9 @@ session_cookie_key = SessionCookie
 -   `user_login_attribute_name`: Name of the user login field in the login form (use the web inspector of your favorite
     browser to find out the field names).
 -   `password_login_attribute_name`: Name of the password field in the login form.
--   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u181`, `8u91`, `8u242`,
-    `7u80-oracle` and `8u251-oracle` are available (default: `7u181`). The `-oracle` versions are special cases which
-    require to build a Docker image yourself because of license restrictions. See [Using Oracle
+-   `java_version`: Java version that is needed to run Java KVM viewer. Currently, `7u51`, `7u79`, `7u181`, `8u91`,
+    `8u242`, `7u80-oracle` and `8u251-oracle` are available (default: `7u181`). The `-oracle` versions are special cases
+    which require to build a Docker image yourself because of license restrictions. See [Using Oracle
     Java](#using-oracle-java) for more details.
 -   `format_jnlp`: Replace "{base_url}" and "{session_key}" in the jnlp file (not needed in most cases)
 -   `send_post_data_as_json`: Send the login POST request with JSON data as data payload (not needed in most cases)
