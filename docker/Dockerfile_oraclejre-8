@@ -1,5 +1,5 @@
 FROM debian:stretch
-LABEL maintainer="Ingo Heimbach <i.heimbach@fz-juelich.de>"
+LABEL maintainer="Ingo Meyer <i.meyer@fz-juelich.de>"
 
 # Install needed packages and Java dependencies (second `apt-get install` call)
 RUN apt-get update && \

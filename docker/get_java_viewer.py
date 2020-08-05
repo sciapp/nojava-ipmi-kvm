@@ -42,8 +42,8 @@ else:
     stdin = sys.stdin
 
 
-__author__ = "Ingo Heimbach"
-__email__ = "i.heimbach@fz-juelich.de"
+__author__ = "Ingo Meyer"
+__email__ = "i.meyer@fz-juelich.de"
 __copyright__ = "Copyright © 2018 Forschungszentrum Jülich GmbH. All rights reserved."
 __license__ = "MIT"
 __version_info__ = (0, 1, 0)
