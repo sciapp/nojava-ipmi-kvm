@@ -2,7 +2,7 @@ PYTHON = python
 PACKAGE_VERSION := $(shell $(PYTHON) -c 'import runpy; print(runpy.run_path("../nojava_ipmi_kvm/_version.py")["__version__"])')
 
 default:
-	@>&2 echo "No default target available, please select one of these: \"build-openjdk\", \"build-oracle\"."
+	@>&2 echo "No default target available, please select one of these: \"build-openjdk\", \"build-oracle\" or \"build-html5\"."
 
 build-openjdk:
 	for openjdk_version in 7 8; do \
@@ -34,4 +34,10 @@ build-oracle:
 	    >&2 echo "Please download \"jre-8u251-linux-x64.tar.gz\" to build an Oracle Java 8 docker image."; \
 	fi
 
-.PHONY: build-openjdk build-oracle default
+build-html5:
+	docker build -t "sciapp/nojava-ipmi-kvm:latest-html5" \
+	           -f "Dockerfile_html5" .; \
+	docker tag "sciapp/nojava-ipmi-kvm:latest-html5" \
+	           "sciapp/nojava-ipmi-kvm:v$(PACKAGE_VERSION)-html5"; \
+
+.PHONY: build-openjdk build-oracle build-html5 default

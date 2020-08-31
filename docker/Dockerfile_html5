@@ -1,10 +1,9 @@
 FROM node:14
 LABEL maintainer="Maximilian Heuwes <m.heuwes@fz-juelich.de>"
 
-# Install needed packages and Java dependencies (second `apt-get install` call)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl net-tools procps python-numpy \
-                                               python-pip python-pyquery python-setuptools python-wheel tar&& \
+                                               python-pip python-pyquery python-setuptools python-wheel tar && \
     rm -rf /var/lib/apt/lists/* && \
     pip install future requests && \
     mkdir /usr/local/kvm-html5/

@@ -132,27 +132,11 @@ def main():
             if not host_config.skip_login:
                 password = read_password()
             kvm_viewer = asyncio.get_event_loop().run_until_complete(
-                start_kvm_container(
-                    host_config.full_hostname,
-                    host_config.skip_login,
-                    host_config.login_user,
-                    password,
-                    host_config.login_endpoint,
-                    host_config.download_endpoint,
-                    host_config.allow_insecure_ssl,
-                    host_config.user_login_attribute_name,
-                    host_config.password_login_attribute_name,
-                    host_config.java_version,
-                    host_config.format_jnlp,
-                    host_config.send_post_data_as_json,
-                    host_config.extra_login_form_fields,
-                    host_config.session_cookie_key,
-                    debug=args.debug,
-                )
+                start_kvm_container(host_config, password, debug=args.debug)
             )
             if args.use_gui and browser.qt_installed:
                 browser.run_vnc_browser(
-                    kvm_viewer.url, host_config.full_hostname, tuple(int(c) for c in config.x_resolution.split("x")),
+                    kvm_viewer.url, host_config.full_hostname, tuple(int(c) for c in config.x_resolution.split("x"))
                 )
             else:
                 print("Use this url: %s to view kvm." % kvm_viewer.url)

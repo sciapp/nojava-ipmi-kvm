@@ -24,7 +24,7 @@ setup(
     version=version,
     packages=find_packages(),
     python_requires="~=3.5",
-    install_requires=["requests", "yacl"],
+    install_requires=["requests", "yacl", "pyyaml"],
     extras_require={"GUI": ["PyQt5>=5.12", "PyQtWebEngine>=5.12"]},
     entry_points={"console_scripts": ["nojava-ipmi-kvm = nojava_ipmi_kvm.cli:main"]},
     author="Ingo Meyer",

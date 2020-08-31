@@ -140,7 +140,7 @@ def get_argumentparser():
         action="store",
         dest="extra_form_fields",
         default=",".join("{}:{}".format(key, value) for key, value in DEFAULTS["extra_form_fields"].items()),
-        help="download url endpoint (default: %(default)s)",
+        help="extra form fields to attach to the login request (default: %(default)s)",
     )
     parser.add_argument(
         "-S",
