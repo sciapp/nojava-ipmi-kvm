@@ -249,8 +249,8 @@ def get_java_viewer(
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
     session = requests.Session()
 
-    def do_login():
-        # type: () -> None
+    def do_login(session_cookie_key):
+        # type: (Optional[Text]) -> None
         assert password is not None
         login_url = urllib.parse.urljoin(base_url, login_endpoint)
         data = {user_attribute_name: user, password_attribute_name: password}
@@ -280,7 +280,7 @@ def get_java_viewer(
 
     # Login to get a session cookie
     if not skip_login:
-        do_login()
+        do_login(session_cookie_key)
     # Download the kvm viewer with the previous created session
     response = session.get(download_url, verify=ssl_verify)
     if response.status_code != 200:
