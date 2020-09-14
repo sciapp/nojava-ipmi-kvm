@@ -2,8 +2,18 @@
 
 _nojava-ipmi-kvm_completions() {
     local hosts
-    hosts=( $(awk '$0~/^\[[^\]]+\]$/ && $0 != "[general]" { print substr($0, 2, length($0)-2) }' ~/.nojava-ipmi-kvmrc 2>/dev/null | sort) )
 
+    _nojava-ipmi-kvm_read_hosts_from_config() {
+        python <<-EOF 2>/dev/null
+			import os
+			import yaml
+
+			with open(os.path.expanduser("~/.nojava-ipmi-kvmrc.yaml"), "r") as config_file:
+			    print("\n".join(yaml.safe_load(config_file)["hosts"].keys()))
+		EOF
+    }
+
+    hosts=( $(_nojava-ipmi-kvm_read_hosts_from_config) )
     COMPREPLY=($(compgen -W "${hosts[*]}" "${COMP_WORDS[1]}"))
 }
 
