@@ -5,6 +5,10 @@
 Users upgrading from version `v0.8.1` or earlier must rewrite their config files. The previously used ini format was not
 flexible enough for adding HTML5 KVM support and was replaced with a [YAML](https://en.wikipedia.org/wiki/YAML) file.
 
+Use the converter script
+[`convert_config_file.py`](https://github.com/sciapp/nojava-ipmi-kvm/blob/master/convert_config_file.py)
+to convert your old ini config file to the new YAML format.
+
 ## Introduction
 
 `nojava-ipmi-kvm` is a tool for running Java-based IPMI-KVM consoles without a local Java installation. It runs a Docker
