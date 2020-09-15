@@ -216,16 +216,16 @@ class Config(object):
         # type: (Text) -> HostConfig
         try:
             host_config = {}
-            if item in self._config_dict["hosts"]:
-                raw_host = self._config_dict["hosts"][item]
-                if "based_on" in raw_host and raw_host["based_on"] in self._config_dict["templates"]:
-                    for k, v in self._config_dict["templates"][raw_host["based_on"]].items():
-                        host_config[k] = v
 
-                host_config["short_hostname"] = item
+            raw_host = self._config_dict["hosts"][item]
+            if "based_on" in raw_host and raw_host["based_on"] in self._config_dict["templates"]:
+                for k, v in self._config_dict["templates"][raw_host["based_on"]].items():
+                    host_config[k] = v
 
-                host_config.update(raw_host)
-                del host_config["based_on"]
+            host_config["short_hostname"] = item
+
+            host_config.update(raw_host)
+            del host_config["based_on"]
 
             if "html5_endpoint" in host_config:
                 return HTML5HostConfig(**host_config)
