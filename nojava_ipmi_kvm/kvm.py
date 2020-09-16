@@ -350,12 +350,18 @@ async def start_kvm_container(
             await asyncio.sleep(1)
 
     log("Waiting for the Docker container to be up and ready...")
+    loop = asyncio.get_event_loop()
+
+    def get():
+        nonlocal external_vnc_dns, web_port, authorization_key, authorization_value
+        cookies = {}
+        if authorization_key is not None and authorization_value is not None:
+            cookies[authorization_key] = authorization_value
+        return requests.head("http://{}:{}".format(external_vnc_dns, web_port), cookies=cookies)
+
     while True:
         try:
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(
-                None, requests.head, "http://{}:{}".format(external_vnc_dns, web_port)
-            )
+            response = await loop.run_in_executor(None, get)
             response.raise_for_status()
             break
         except (requests.ConnectionError, requests.HTTPError):
