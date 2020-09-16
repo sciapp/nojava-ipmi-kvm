@@ -3,22 +3,19 @@ import logging
 import os
 import platform
 import requests
-import signal
 import subprocess
-import sys
 import uuid
 import re
 
 import asyncio
 
 try:
-    from typing import List, Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
+    from typing import Any, Callable, List, Optional, Text, Tuple  # noqa: F401  # pylint: disable=unused-import
 except ImportError:
     pass
 
-from types import FrameType
 from .utils import generate_temp_password
-from .config import config
+from .config import config, HostConfig, HTML5HostConfig, JavaHostConfig
 from ._version import __version__
 
 logger = logging.getLogger(__name__)
@@ -59,11 +56,10 @@ def is_command_available(command):
 
 
 class KvmViewer:
-    def __init__(self, url, external_vnc_dns, vnc_web_port, vnc_password, kill_process):
+    def __init__(self, url, external_vnc_dns, web_port, kill_process):
         self._url = url
         self._external_vnc_dns = external_vnc_dns
-        self._vnc_web_port = vnc_web_port
-        self._vnc_password = vnc_password
+        self._web_port = web_port
         self._kill_process = kill_process
         self._already_killed = False
 
@@ -78,12 +74,8 @@ class KvmViewer:
         return self._external_vnc_dns
 
     @property
-    def vnc_web_port(self):
-        return self._vnc_web_port
-
-    @property
-    def vnc_password(self):
-        return self._vnc_password
+    def web_port(self):
+        return self._web_port
 
     def kill_process(self):
         if self._already_killed:
@@ -92,201 +84,245 @@ class KvmViewer:
         return self._kill_process()
 
 
-async def start_kvm_container(
-    hostname,
-    skip_login,
-    login_user,
-    login_password,
-    login_endpoint,
-    download_endpoint,
-    allow_insecure_ssl,
-    user_login_attribute_name,
-    password_login_attribute_name,
-    java_version,
-    format_jnlp,
-    send_post_data_as_json,
-    extra_login_form_fields=None,
-    session_cookie_key=None,
-    external_vnc_dns="localhost",
-    docker_port=None,
-    additional_logging=None,
-    selected_resolution=None,
-    debug=False,
-):
-    # type: (Text, Text, Text, Text, Text, bool, Text, Text, Text, bool, Text, Optional[Text]) -> None
+class JavaKvmViewer(KvmViewer):
+    def __init__(self, url, external_vnc_dns, web_port, kill_process, vnc_password):
+        super().__init__(url, external_vnc_dns, web_port, kill_process)
+        self._vnc_password = vnc_password
 
-    subprocess_output = None if debug else subprocess.DEVNULL
+    @property
+    def vnc_password(self):
+        return self._vnc_password
 
+
+class HTML5KvmViewer(KvmViewer):
+    def __init__(
+        self,
+        url,
+        external_vnc_dns,
+        web_port,
+        kill_process,
+        subdir,
+        authorization_key,
+        authorization_value,
+        html5_endpoint,
+    ):
+        super().__init__(url, external_vnc_dns, web_port, kill_process)
+        self._subdir = subdir
+        self._authorization_key = authorization_key
+        self._authorization_value = authorization_value
+        self._html5_endpoint = html5_endpoint
+
+    @property
+    def subdir(self):
+        return self._subdir
+
+    @property
+    def authorization_key(self):
+        return self._authorization_key
+
+    @property
+    def authorization_value(self):
+        return self._authorization_value
+
+    @property
+    def html5_endpoint(self):
+        return self._html5_endpoint
+
+
+def log_factory(additional_logging):
     def log(msg, *args, **kwargs):
         logger.info(msg, *args, **kwargs)
         if additional_logging is not None:
             additional_logging(msg, *args, **kwargs)
 
+    return log
+
+
+def add_sudo_if_configured(command_list):
+    # type: (List[Text]) -> List[Text]
+    if config.run_docker_with_sudo:
+        command_list.insert(0, "sudo")
+    return command_list
+
+
+async def check_webserver(log, url):
+    # type: (Callable, Text) -> None
+    log("Check if '%s' is reachable...", url)
+    try:
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, requests.head, url)
+        response.raise_for_status()
+        log("The url '%s' is reachable.", url)
+    except (requests.ConnectionError, requests.HTTPError):
+        raise WebserverNotReachableError("The url '{}' is not reachable. Is the host down?".format(url))
+
+
+async def check_docker(log, subprocess_output):
+    # type: (Callable, Optional[int]) -> None
+    if not is_command_available("docker"):
+        raise DockerNotInstalledError("Could not find the `docker` command. Please install Docker first.")
+    if (
+        subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output)
+        != 0
+    ):
+        if running_macos():
+            subprocess.check_call(["open", "-g", "-a", "Docker"])
+            log("Waiting for the Docker engine to be ready...")
+            while (
+                subprocess.call(
+                    add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output
+                )
+                != 0
+            ):
+                await asyncio.sleep(1)
+        else:
+            raise DockerNotCallableError(
+                "`docker` cannot be called. If `docker` needs `sudo`, please set `run_docker_with_sudo = True`"
+                " in your `~/.nojava-ipmi-kvmrc`."
+            )
+
+
+def create_extra_args(host_config):
+    # type: (HostConfig) -> List
+    extra_args = [
+        "-u",
+        host_config.login_user,
+        "-l",
+        host_config.login_endpoint,
+        "-U",
+        host_config.user_login_attribute_name,
+        "-P",
+        host_config.password_login_attribute_name,
+        host_config.full_hostname,
+    ]
+    if host_config.extra_login_form_fields is not None:
+        extra_args.extend(("-e", host_config.extra_login_form_fields))
+    if host_config.session_cookie_key is not None:
+        extra_args.extend(("-K", host_config.session_cookie_key))
+    if host_config.skip_login:
+        extra_args.insert(0, "-s")
+    if host_config.send_post_data_as_json:
+        extra_args.insert(0, "-j")
+    if host_config.allow_insecure_ssl:
+        extra_args.insert(0, "-k")
+
+    return extra_args
+
+
+def create_java_docker_args(host_config, login_password, selected_resolution):
+    # type: (JavaHostConfig, Optional[Text], Optional[Text]) -> Tuple[List, List, Text, Text, Text]
+    # extra-program-args, env variables, docker image, stdin
+    vnc_password = generate_temp_password(20)
+    if selected_resolution is None:
+        selected_resolution = config.x_resolution
+    if not re.match(r"^[1-9][0-9]{2,3}x[1-9][0-9]{2,3}$", selected_resolution):
+        selected_resolution = "1600x1200"
+
+    extra_args = ["-d", host_config.download_endpoint]
+    extra_args.extend(create_extra_args(host_config))
+
+    if host_config.format_jnlp:
+        extra_args.insert(0, "-f")
+
+    environment_variables = [
+        "-e",
+        "XRES={}".format(selected_resolution),
+        "-e",
+        "JAVA_VERSION={}".format(host_config.java_version),
+        "-e",
+        "VNC_PASSWD={}".format(vnc_password),
+        "-e",
+        "KVM_HOSTNAME={}".format(host_config.full_hostname),
+    ]
+    java_provider = "oraclejre" if host_config.java_version.endswith("-oracle") else "openjdk"
+    java_major_version = host_config.java_version.split("u")[0]
+
+    return (
+        extra_args,
+        environment_variables,
+        config.java_docker_image.format(
+            version=__version__, java_provider=java_provider, java_major_version=java_major_version
+        ),
+        login_password if login_password is not None else "",
+        vnc_password,
+    )
+
+
+def create_html5_docker_args(
+    host_config, login_password, authorization_key=None, authorization_value=None, subdir=None
+):
+    # type: (HTML5HostConfig, Optional[Text], Optional[Text], Optional[Text], Optional[Text]) -> Tuple[List, List, Text, Text]
+    # extra-program-args, env variables, docker image, stdin
+    extra_args = create_extra_args(host_config)
+
+    environment_variables = ["-e", "KVM_HOSTNAME={}".format(host_config.full_hostname)]
+    return (
+        extra_args,
+        environment_variables,
+        config.html5_docker_image.format(version=__version__),
+        host_config.get_config_json(login_password, subdir, authorization_key, authorization_value),
+    )
+
+
+async def start_kvm_container(
+    host_config,
+    login_password,
+    external_vnc_dns="localhost",
+    docker_port=None,
+    additional_logging=None,
+    selected_resolution=None,
+    authorization_key=None,
+    authorization_value=None,
+    subdir=None,
+    debug=False,
+):
+    # type: (HostConfig, Optional[Text], Text, Optional[int], Optional[Callable[..., None]], Optional[Text], Optional[Text], Optional[Text], Optional[Text], bool) -> KvmViewer
+    if not isinstance(host_config, (JavaHostConfig, HTML5HostConfig)):
+        raise ValueError("Invalid host config class")
+
+    log = log_factory(additional_logging)
+
+    subprocess_output = None if debug else subprocess.DEVNULL
+
+    await check_webserver(log, "http://{}/".format(host_config.full_hostname))
+    await check_docker(log, subprocess_output)
+
+    # TODO: pass variables as `extra_args` (?)
     DOCKER_CONTAINER_NAME = "nojava-ipmi-kvmrc-{}".format(uuid.uuid4())
 
-    def add_sudo_if_configured(command_list):
-        # type: (List[Text]) -> List[Text]
-        if config.run_docker_with_sudo:
-            command_list.insert(0, "sudo")
-        return command_list
-
-    async def check_webserver(url):
-        # type: (Text) -> None
-        log("Check if '%s' is reachable...", url)
-        try:
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(None, requests.head, url)
-            response.raise_for_status()
-            log("The url '%s' is reachable.", url)
-        except (requests.ConnectionError, requests.HTTPError):
-            raise WebserverNotReachableError("The url '{}' is not reachable. Is the host down?".format(url))
-
-    async def check_docker():
-        # type: () -> None
-        if not is_command_available("docker"):
-            raise DockerNotInstalledError("Could not find the `docker` command. Please install Docker first.")
-        if (
-            subprocess.call(
-                add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output
-            )
-            != 0
-        ):
-            if running_macos():
-                subprocess.check_call(["open", "-g", "-a", "Docker"])
-                log("Waiting for the Docker engine to be ready...")
-                while (
-                    subprocess.call(
-                        add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output
-                    )
-                    != 0
-                ):
-                    await asyncio.sleep(1)
-            else:
-                raise DockerNotCallableError(
-                    "`docker` cannot be called. If `docker` needs `sudo`, please set `run_docker_with_sudo = True`"
-                    " in your `~/.nojava-ipmi-kvmrc`."
-                )
-
-    async def run_docker():
-        # type: () -> Tuple[subprocess.Popen, int]
-        # TODO: pass variables as `extra_args` (?)
-        nonlocal selected_resolution
-        vnc_password = generate_temp_password(20)
-        if selected_resolution is None:
-            selected_resolution = config.x_resolution
-        if not re.match(r"^[1-9][0-9]{2,3}x[1-9][0-9]{2,3}$", selected_resolution):
-            selected_resolution = "1600x1200"
-        environment_variables = [
-            "-e",
-            "XRES={}".format(selected_resolution),
-            "-e",
-            "JAVA_VERSION={}".format(java_version),
-            "-e",
-            "VNC_PASSWD={}".format(vnc_password),
-            "-e",
-            "KVM_HOSTNAME={}".format(hostname),
-        ]
-        extra_args = [
-            "-u",
-            login_user,
-            "-l",
-            login_endpoint,
-            "-d",
-            download_endpoint,
-            "-U",
-            user_login_attribute_name,
-            "-P",
-            password_login_attribute_name,
-            hostname,
-        ]
-        if extra_login_form_fields is not None:
-            extra_args.extend(("-e", extra_login_form_fields))
-        if session_cookie_key is not None:
-            extra_args.extend(("-K", session_cookie_key))
-        if skip_login:
-            extra_args.insert(0, "-s")
-        if format_jnlp:
-            extra_args.insert(0, "-f")
-        if send_post_data_as_json:
-            extra_args.insert(0, "-j")
-        if allow_insecure_ssl:
-            extra_args.insert(0, "-k")
-        java_provider = "oraclejre" if java_version.endswith("-oracle") else "openjdk"
-        java_major_version = java_version.split("u")[0]
-        log("Starting the Docker container...")
-        docker_process = subprocess.Popen(
-            add_sudo_if_configured(
-                ["docker", "run", "--rm", "-i", "-v", "/etc/hosts:/etc/hosts:ro", "--name", DOCKER_CONTAINER_NAME]
-            )
-            + environment_variables
-            + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port)])
-            + [
-                config.docker_image.format(
-                    version=__version__, java_provider=java_provider, java_major_version=java_major_version
-                )
-            ]
-            + extra_args,
-            stdin=subprocess.PIPE,
-            stdout=subprocess_output,
-            stderr=subprocess_output,
+    if isinstance(host_config, JavaHostConfig):
+        extra_args, environment_variables, docker_image, stdin, vnc_password = create_java_docker_args(
+            host_config, login_password, selected_resolution
         )
-        if docker_process.stdin is not None:
-            docker_process.stdin.write("{}\n".format(login_password).encode("utf-8"))
-            docker_process.stdin.flush()
-        else:
-            # This case cannot happen (`if` is used to satisfy mypy)
-            raise IOError("Something strange happened: Docker stdin not available.")
-        while True:
-            try:
-                if docker_process.poll() is not None:
-                    raise DockerTerminatedError(
-                        "Docker terminated with return code {}.".format(docker_process.returncode)
-                    )
-                vnc_web_port = int(
-                    subprocess.check_output(
-                        add_sudo_if_configured(["docker", "port", DOCKER_CONTAINER_NAME]), stderr=subprocess_output
-                    )
-                    .strip()
-                    .split(b":")[1]
-                )
-                break
-            except (IndexError, ValueError):
-                terminate_docker(docker_process)
-                raise DockerPortNotReadableError("Cannot read the exposted VNC web port.")
-            except subprocess.CalledProcessError:
-                await asyncio.sleep(1)
+    elif isinstance(host_config, HTML5HostConfig):
+        extra_args, environment_variables, docker_image, stdin = create_html5_docker_args(
+            host_config, login_password, authorization_key, authorization_value, subdir
+        )
 
-        log("Waiting for the Docker container to be up and ready...")
-        while True:
-            try:
-                loop = asyncio.get_event_loop()
-                response = await loop.run_in_executor(
-                    None, requests.head, "http://{}:{}".format(external_vnc_dns, vnc_web_port)
-                )
-                response.raise_for_status()
-                break
-            except (requests.ConnectionError, requests.HTTPError):
-                if docker_process.poll() is not None:
-                    if not skip_login:
-                        raise DockerTerminatedError(
-                            "Docker terminated with return code {}. Maybe you entered a wrong password?".format(
-                                docker_process.returncode
-                            )
-                        )
-                    else:
-                        raise DockerTerminatedError(
-                            (
-                                "Docker terminated with return code {}."
-                                + " Maybe you configured a wrong download endpoint or need a login?"
-                            ).format(docker_process.returncode)
-                        )
-                await asyncio.sleep(1)
+    log("Starting the Docker container...")
+    docker_process = subprocess.Popen(
+        add_sudo_if_configured(
+            ["docker", "run", "-i", "-v", "/etc/hosts:/etc/hosts:ro", "--rm", "--name", DOCKER_CONTAINER_NAME]
+        )
+        + environment_variables
+        + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port)])
+        + [docker_image]
+        + extra_args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess_output,
+        stderr=subprocess_output,
+    )
+    if docker_process.stdin is not None:
+        docker_process.stdin.write("{}\n".format(stdin).encode("utf-8"))
+        docker_process.stdin.flush()
+        docker_process.stdin.close()
+    else:
+        # This case cannot happen (`if` is used to satisfy mypy)
+        raise IOError("Something strange happened: Docker stdin not available.")
 
-        log("Docker container is up and running.")
-        return docker_process, vnc_web_port, vnc_password
-
-    def terminate_docker(docker_process):
-        # type: (subprocess.Popen) -> None
+    def terminate_docker():
+        # type: () -> None
+        nonlocal docker_process
         if docker_process.poll() is None:
             subprocess.check_call(
                 add_sudo_if_configured(["docker", "kill", DOCKER_CONTAINER_NAME]),
@@ -295,13 +331,86 @@ async def start_kvm_container(
             )
         log("Docker container was terminated.")
 
-    await check_webserver("http://{}/".format(hostname))
-    await check_docker()
-    docker_process, vnc_web_port, vnc_password = await run_docker()
+    while True:
+        try:
+            if docker_process.poll() is not None:
+                raise DockerTerminatedError("Docker terminated with return code {}.".format(docker_process.returncode))
+            web_port = int(
+                subprocess.check_output(
+                    add_sudo_if_configured(["docker", "port", DOCKER_CONTAINER_NAME]), stderr=subprocess_output
+                )
+                .strip()
+                .split(b":")[1]
+            )
+            break
+        except (IndexError, ValueError):
+            terminate_docker()
+            raise DockerPortNotReadableError("Cannot read the VNC web port.")
+        except subprocess.CalledProcessError:
+            await asyncio.sleep(1)
 
-    url = "http://{}:{}/vnc.html?host={}&port={}&autoconnect=true&password={}".format(
-        external_vnc_dns, vnc_web_port, external_vnc_dns, vnc_web_port, vnc_password
-    )
-    log("Url to view kvm console: {}".format(url))
+    log("Waiting for the Docker container to be up and ready...")
+    loop = asyncio.get_event_loop()
 
-    return KvmViewer(url, external_vnc_dns, vnc_web_port, vnc_password, lambda: terminate_docker(docker_process))
+    def get():
+        nonlocal external_vnc_dns, web_port, authorization_key, authorization_value
+        cookies = {}
+        if authorization_key is not None and authorization_value is not None:
+            cookies[authorization_key] = authorization_value
+        return requests.head("http://{}:{}".format(external_vnc_dns, web_port), cookies=cookies)
+
+    while True:
+        try:
+            response = await loop.run_in_executor(None, get)
+            response.raise_for_status()
+            break
+        except (requests.ConnectionError, requests.HTTPError):
+            if docker_process.poll() is not None:
+                if not host_config.skip_login:
+                    raise DockerTerminatedError(
+                        "Docker terminated with return code {}. Maybe you entered a wrong password?".format(
+                            docker_process.returncode
+                        )
+                    )
+                else:
+                    raise DockerTerminatedError(
+                        (
+                            "Docker terminated with return code {}."
+                            + " Maybe you configured a wrong download endpoint or need a login?"
+                        ).format(docker_process.returncode)
+                    )
+            await asyncio.sleep(1)
+
+    log("Docker container is up and running.")
+
+    if isinstance(host_config, JavaHostConfig):
+        url = "http://{ext_dns}:{web_port}/vnc.html?host={ext_dns}&port={web_port}&autoconnect=true&password={password}".format(
+            ext_dns=external_vnc_dns, password=vnc_password, web_port=web_port
+        )
+        log("Url to view kvm console: {}".format(url))
+        return JavaKvmViewer(url, external_vnc_dns, web_port, terminate_docker, vnc_password)
+    elif isinstance(host_config, HTML5HostConfig):
+        url = "http://{}:{}/{}".format(external_vnc_dns, web_port, host_config.html5_endpoint)
+        log("Url to view kvm console: {}".format(url))
+        return HTML5KvmViewer(
+            url,
+            external_vnc_dns,
+            web_port,
+            terminate_docker,
+            subdir,
+            authorization_key,
+            authorization_value,
+            host_config.html5_endpoint,
+        )
+    else:
+        assert False  # Type is checked at the top of function
+
+
+__all__ = [
+    "DockerNotCallableError",
+    "DockerNotInstalledError",
+    "DockerPortNotReadableError",
+    "DockerTerminatedError",
+    "WebserverNotReachableError",
+    "start_kvm_container",
+]
