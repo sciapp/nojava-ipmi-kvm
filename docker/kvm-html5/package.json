@@ -1,0 +1,18 @@
+{
+  "name": "kvm-html5",
+  "version": "0.0.1",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "connect": "^3.7.0",
+    "cookie": "^0.4.1",
+    "http-proxy": "github:mixxen/node-http-proxy#preserve-case-incoming",
+    "node-global-proxy": "^1.0.1",
+    "transformer-proxy": "^0.3.5"
+  }
+}

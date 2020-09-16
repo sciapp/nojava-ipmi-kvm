@@ -20,6 +20,7 @@ import re
 import requests
 import urllib.parse
 import sys
+import json
 
 try:
     from typing import Any, Dict, Optional, Text  # noqa: F401  # pylint: disable=unused-import
@@ -60,6 +61,7 @@ DEFAULTS = {
     "login_user": "ADMIN",
     "skip_login": False,
     "use_json": False,
+    "session_only": False,
 }  # type: Dict[str, Any]
 
 
@@ -138,7 +140,15 @@ def get_argumentparser():
         action="store",
         dest="extra_form_fields",
         default=",".join("{}:{}".format(key, value) for key, value in DEFAULTS["extra_form_fields"].items()),
-        help="download url endpoint (default: %(default)s)",
+        help="extra form fields to attach to the login request (default: %(default)s)",
+    )
+    parser.add_argument(
+        "-S",
+        "--session-only",
+        action="store_true",
+        dest="session_only",
+        default=DEFAULTS["session_only"],
+        help="Only login and print cookies + referer as json, no jnlp download (default %(default)s)",
     )
     parser.add_argument(
         "-f",
@@ -241,6 +251,7 @@ def get_java_viewer(
     format_jnlp=False,
     use_json=False,
     session_cookie_key=None,
+    session_only=False,
 ):
     # type: (Text, bool, Optional[Text], Text, Text, Text, Text, bool, Text, Text, Optional[Dict[Text, Text]], bool, bool, Optional[Text]) -> None
     if format_jnlp and session_cookie_key is None:
@@ -281,6 +292,11 @@ def get_java_viewer(
     # Login to get a session cookie
     if not skip_login:
         do_login(session_cookie_key)
+
+    if session_only:
+        print(json.dumps({"cookies": session.cookies.get_dict(), "headers": dict(session.headers)}))
+        return
+
     # Download the kvm viewer with the previous created session
     response = session.get(download_url, verify=ssl_verify)
     if response.status_code != 200:
@@ -322,6 +338,7 @@ def main():
                 args.format_jnlp,
                 args.json,
                 args.session_cookie_key,
+                args.session_only,
             )
         except get_java_viewer_exceptions as e:
             logging.error(str(e))
