@@ -20,7 +20,13 @@ Starting with version `v0.9.0`, `nojava-ipmi-kvm` also supports HTML5 based kvm 
 
 This project is based on ideas from [solarkennedy/ipmi-kvm-docker](https://github.com/solarkennedy/ipmi-kvm-docker).
 
-## Installation
+## Deploying as a web service
+
+If you would like to access IPMI-KVM consoles with a browser only (without Java plugins and a local installation of
+`nojava-impi-kvm`), see [`nojava-ipmi-kvm-server`](https://github.com/sciapp/nojava-ipmi-kvm-server) which encapsulates
+`nojava-ipmi-kvm` in a web service.
+
+## Local Installation
 
 The latest version can be obtained from PyPI and runs with Python 3.5+:
 
