@@ -116,7 +116,7 @@ Then, add a definition for every single kvm host by reusing the previously defin
 ```yaml
 hosts:
   mykvmhost:
-    based_on: kvm-openjdk-7u51:
+    based_on: kvm-openjdk-7u51
     full_hostname: mykvmhost.org
 ```
 
