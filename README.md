@@ -20,7 +20,13 @@ Starting with version `v0.9.0`, `nojava-ipmi-kvm` also supports HTML5 based kvm 
 
 This project is based on ideas from [solarkennedy/ipmi-kvm-docker](https://github.com/solarkennedy/ipmi-kvm-docker).
 
-## Installation
+## Deploying as a web service
+
+If you would like to access IPMI-KVM consoles with a browser only (without Java plugins and a local installation of
+`nojava-impi-kvm`), see [`nojava-ipmi-kvm-server`](https://github.com/sciapp/nojava-ipmi-kvm-server) which encapsulates
+`nojava-ipmi-kvm` in a web service.
+
+## Local Installation
 
 The latest version can be obtained from PyPI and runs with Python 3.5+:
 
@@ -52,17 +58,17 @@ example:
 ```yaml
 templates:
   kvm-openjdk-7u51:
-    skip_login = False
-    login_user = ADMIN
-    login_endpoint = rpc/WEBSES/create.asp
-    allow_insecure_ssl = False
-    user_login_attribute_name = WEBVAR_USERNAME
-    password_login_attribute_name = WEBVAR_PASSWORD
-    send_post_data_as_json = False
-    session_cookie_key = SessionCookie
-    download_endpoint = Java/jviewer.jnlp
-    java_version = 7u51
-    format_jnlp = False
+    skip_login: False
+    login_user: ADMIN
+    login_endpoint: rpc/WEBSES/create.asp
+    allow_insecure_ssl: False
+    user_login_attribute_name: WEBVAR_USERNAME
+    password_login_attribute_name: WEBVAR_PASSWORD
+    send_post_data_as_json: False
+    session_cookie_key: SessionCookie
+    download_endpoint: Java/jviewer.jnlp
+    java_version: 7u51
+    format_jnlp: False
 ```
 
 -   `skip_login`: Skip the login to the KVM host (should be `False` in most cases). If the login is skipped, you can
@@ -110,7 +116,7 @@ Then, add a definition for every single kvm host by reusing the previously defin
 ```yaml
 hosts:
   mykvmhost:
-    based_on: kvm-openjdk-7u51:
+    based_on: kvm-openjdk-7u51
     full_hostname: mykvmhost.org
 ```
 

@@ -340,7 +340,7 @@ async def start_kvm_container(
                     add_sudo_if_configured(["docker", "port", DOCKER_CONTAINER_NAME]), stderr=subprocess_output
                 )
                 .strip()
-                .split(b":")[1]
+                .split(b"\n")[0].split(b":")[1]
             )
             break
         except (IndexError, ValueError):
