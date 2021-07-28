@@ -23,10 +23,6 @@ deploy-to-github:
 deploy-to-dockerhub:
   image: docker:latest
   stage: deploy
-  variables:
-    DOCKER_DRIVER: overlay2
-  services:
-  - docker:dind
   script:
   - apk add --no-cache make python3
   - make -C docker PYTHON=python3 build-openjdk build-html5
