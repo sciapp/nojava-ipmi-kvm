@@ -16,34 +16,34 @@ RUN apt-get update && \
     # Add support for asian characters
     apt-get install -y --no-install-recommends fonts-arphic-ukai fonts-arphic-uming fonts-ipafont-mincho \
                                                fonts-ipafont-gothic fonts-unfonts-core && \
-    pip install future requests websockify && \
+    pip install future requests 'websockify<0.10' && \
     rm -rf /var/lib/apt/lists/*
 
 RUN for java_version in "7u51" "7u79" "7u181"; do \
         mkdir -p "/opt/java_packages/${java_version}"; \
     done && \
     cd "/opt/java_packages/7u51" && \
-    for package_url in "https://snapshot.debian.org/archive/debian/20140401T220416Z/pool/main/o/openjdk-7/openjdk-7-jre_7u51-2.4.6-1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian/20140401T220416Z/pool/main/o/openjdk-7/openjdk-7-jre-headless_7u51-2.4.6-1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian/20141009T042436Z/pool/main/libj/libjpeg8/libjpeg8_8d1-2_amd64.deb"; do \
+    for package_url in "http://snapshot.debian.org/archive/debian/20140401T220416Z/pool/main/o/openjdk-7/openjdk-7-jre_7u51-2.4.6-1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian/20140401T220416Z/pool/main/o/openjdk-7/openjdk-7-jre-headless_7u51-2.4.6-1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian/20141009T042436Z/pool/main/libj/libjpeg8/libjpeg8_8d1-2_amd64.deb"; do \
         curl -O -L "${package_url}" || return 1; \
     done && \
     cd "/opt/java_packages/7u79" && \
-    for package_url in "https://snapshot.debian.org/archive/debian/20150724T034333Z/pool/main/o/openjdk-7/openjdk-7-jre_7u79-2.5.6-1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian/20150724T034333Z/pool/main/o/openjdk-7/openjdk-7-jre-headless_7u79-2.5.6-1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian/20141009T042436Z/pool/main/libj/libjpeg8/libjpeg8_8d1-2_amd64.deb"; do \
+    for package_url in "http://snapshot.debian.org/archive/debian/20150724T034333Z/pool/main/o/openjdk-7/openjdk-7-jre_7u79-2.5.6-1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian/20150724T034333Z/pool/main/o/openjdk-7/openjdk-7-jre-headless_7u79-2.5.6-1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian/20141009T042436Z/pool/main/libj/libjpeg8/libjpeg8_8d1-2_amd64.deb"; do \
         curl -O -L "${package_url}" || return 1; \
     done && \
     cd "/opt/java_packages/7u181" && \
-    for package_url in "https://snapshot.debian.org/archive/debian-security/20180610T194921Z/pool/updates/main/o/openjdk-7/openjdk-7-jre_7u181-2.6.14-1~deb8u1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian-security/20180610T194921Z/pool/updates/main/o/openjdk-7/openjdk-7-jre-headless_7u181-2.6.14-1~deb8u1_amd64.deb"; do \
+    for package_url in "http://snapshot.debian.org/archive/debian-security/20180610T194921Z/pool/updates/main/o/openjdk-7/openjdk-7-jre_7u181-2.6.14-1~deb8u1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian-security/20180610T194921Z/pool/updates/main/o/openjdk-7/openjdk-7-jre-headless_7u181-2.6.14-1~deb8u1_amd64.deb"; do \
         curl -O -L "${package_url}" || return 1; \
     done && \
     mkdir "/opt/icedtea" && \
     cd "/opt/icedtea" && \
-    for package_url in "https://snapshot.debian.org/archive/debian/20160526T040703Z/pool/main/i/icedtea-web/icedtea-7-plugin_1.5.3-1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian/20160526T040703Z/pool/main/i/icedtea-web/icedtea-netx_1.5.3-1_amd64.deb" \
-                       "https://snapshot.debian.org/archive/debian/20160526T040703Z/pool/main/i/icedtea-web/icedtea-netx-common_1.5.3-1_all.deb"; do \
+    for package_url in "http://snapshot.debian.org/archive/debian/20160526T040703Z/pool/main/i/icedtea-web/icedtea-7-plugin_1.5.3-1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian/20160526T040703Z/pool/main/i/icedtea-web/icedtea-netx_1.5.3-1_amd64.deb" \
+                       "http://snapshot.debian.org/archive/debian/20160526T040703Z/pool/main/i/icedtea-web/icedtea-netx-common_1.5.3-1_all.deb"; do \
         curl -O -L "${package_url}" || return 1; \
     done
 
