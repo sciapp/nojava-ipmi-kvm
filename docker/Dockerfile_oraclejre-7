@@ -40,7 +40,7 @@ RUN apt-get update && \
     # Add support for asian characters
     apt-get install -y --no-install-recommends fonts-arphic-ukai fonts-arphic-uming fonts-ipafont-mincho \
                                                fonts-ipafont-gothic fonts-unfonts-core && \
-    pip install future requests websockify && \
+    pip install future requests 'websockify<0.10' && \
     rm -rf /var/lib/apt/lists/*
 
 RUN NOVNC_VERSION="1.1.0" && \
