@@ -196,8 +196,8 @@ class Config(object):
         # Set defaults
         self._config_dict = {
             "general": {
-                "java_docker_image": "sciapp/nojava-ipmi-kvm:v{version}-{java_provider}-{java_major_version}",
-                "html5_docker_image": "sciapp/nojava-ipmi-kvm:v{version}-html5",
+                "java_docker_image": "docker.io/sciapp/nojava-ipmi-kvm:v{version}-{java_provider}-{java_major_version}",
+                "html5_docker_image": "docker.io/sciapp/nojava-ipmi-kvm:v{version}-html5",
                 "run_docker_with_sudo": False,
                 "x_resolution": "1024x768",
             },
