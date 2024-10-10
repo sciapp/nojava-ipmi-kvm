@@ -10,7 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "connect": "^3.7.0",
-    "cookie": "^0.4.1",
+    "cookie": "^0.7.0",
     "http-proxy": "github:mixxen/node-http-proxy#preserve-case-incoming",
     "node-global-proxy": "^1.0.1",
     "transformer-proxy": "^0.3.5"
