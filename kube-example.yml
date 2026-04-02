@@ -1,0 +1,78 @@
+metadata:
+  name: ipmi
+  labels:
+    name: ipmi
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+  selector:
+    name: ipmi
+  type: ClusterIP
+kind: Service
+apiVersion: v1
+---
+metadata:
+  name: ipmi
+  labels:
+    name: ipmi
+spec:
+  ingressClassName: null
+  rules:
+    - host: ipmi.your.domain
+      http:
+        paths:
+          - backend:
+              service:
+                name: ipmi
+                port:
+                  name: http
+            path: /
+            pathType: Prefix
+kind: Ingress
+apiVersion: networking.k8s.io/v1
+---
+metadata:
+  name: ipmi
+  labels:
+    name: ipmi
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: ipmi
+  template:
+    metadata:
+      labels:
+        name: ipmi
+    spec:
+      containers:
+        - image: docker.io/sciapp/nojava-ipmi-kvm:v0.9.2-openjdk-8
+          command:
+            - bash
+            - -c
+            - echo admin | $ENTRY
+          env:
+            - name: ENTRY
+              value: docker-entrypoint -k 192.168.1.114 -u admin -l http://192.168.1.114/rpc/WEBSES/create.asp -d http://192.168.1.114/Java/jviewer.jnlp?EXTRNIP=192.168.1.114&JNLPSTR=JViewer -U WEBVAR_USERNAME -P WEBVAR_PASSWORD -K SessionCookie
+            - name: XRES
+              value: 1600x1200
+            - name: JAVA_VERSION
+              value: 8u91
+            - name: VNC_PASSWD
+              value: "123"
+            - name: KVM_HOSTNAME
+              value: 192.168.1.114
+          ports:
+            - containerPort: 8080
+              name: http
+          imagePullPolicy: IfNotPresent
+          name: ipmi
+      securityContext:
+        fsGroupChangePolicy: OnRootMismatch
+  serviceName: ipmi
+kind: StatefulSet
+apiVersion: apps/v1
+
