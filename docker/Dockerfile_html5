@@ -1,6 +1,14 @@
 FROM node:14
 LABEL maintainer="Maximilian Heuwes <m.heuwes@fz-juelich.de>"
 
+# Set packages from deb.debian.com to archive.debian.com
+COPY ./config/buster-sources.list /etc/apt/sources.list
+RUN apt-get update && \
+    apt-get install -y wget && \
+    wget -O /tmp/debian-keyring.deb http://http.us.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb && \
+    dpkg -i /tmp/debian-keyring.deb && \
+    rm /tmp/debian-keyring.deb
+
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl net-tools procps python-numpy \
                                                python-pip python-pyquery python-setuptools python-wheel tar && \

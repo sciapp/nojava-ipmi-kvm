@@ -1,9 +1,16 @@
 FROM debian:stretch
 LABEL maintainer="Ingo Meyer <i.meyer@fz-juelich.de>"
 
-# Install needed packages and Java dependencies (second `apt-get install` call)
+# Set packages from deb.debian.com to archive.debian.com
+COPY ./config/stretch-sources.list /etc/apt/sources.list
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools procps python-numpy \
+    apt-get install -y wget && \
+    wget -O /tmp/debian-keyring.deb http://http.us.debian.org/debian/pool/main/d/debian-archive-keyring/debian-archive-keyring_2025.1_all.deb && \
+    dpkg -i /tmp/debian-keyring.deb && \
+    rm /tmp/debian-keyring.deb
+
+# Install needed packages and Java dependencies (second `apt-get install` call)
+RUN apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools procps python-numpy \
                                                python-pip python-pyquery python-setuptools python-wheel supervisor tar \
                                                x11vnc xvfb && \
     apt-get install -y --no-install-recommends adwaita-icon-theme ca-certificates ca-certificates-java \
@@ -76,7 +83,7 @@ COPY supervisord_openjdk-8.conf /etc/supervisor/conf.d/supervisord.conf
 
 WORKDIR /root/
 
-ENV DISPLAY :0
+ENV DISPLAY=:0
 EXPOSE 8080
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint"]

@@ -15,18 +15,19 @@ build-openjdk:
 	done
 
 build-oracle:
-	@if [[ -f "jre-7u80-linux-x64.tar.gz" ]]; then \
+	@if [ -f "data/jre-7u80-linux-x64.tar.gz" ]; then \
 	    docker build -t "sciapp/nojava-ipmi-kvm:latest-oraclejre-7" -f "Dockerfile_oraclejre-7" .; \
-	    if [[ "$$(git symbolic-ref -q HEAD)" == "refs/heads/master" ]]; then \
+	    if [ "$$(git symbolic-ref -q HEAD)" = "refs/heads/main" ]; then \
 	        docker tag "sciapp/nojava-ipmi-kvm:latest-oraclejre-7" \
 	                   "sciapp/nojava-ipmi-kvm:v$(PACKAGE_VERSION)-oraclejre-7"; \
 	    fi; \
 	else \
 	    >&2 echo "Please download \"jre-7u80-linux-x64.tar.gz\" to build an Oracle Java 7 docker image."; \
-	fi; \
-	if [[ -f "jre-8u251-linux-x64.tar.gz" ]]; then \
+	fi;
+
+	@if [ -f "data/jre-8u251-linux-x64.tar.gz" ]; then \
 	    docker build -t "sciapp/nojava-ipmi-kvm:latest-oraclejre-8" -f "Dockerfile_oraclejre-8" .; \
-	    if [[ "$$(git symbolic-ref -q HEAD)" == "refs/heads/master" ]]; then \
+	    if [ "$$(git symbolic-ref -q HEAD)" = "refs/heads/master" ]; then \
 	        docker tag "sciapp/nojava-ipmi-kvm:latest-oraclejre-8" \
 	                   "sciapp/nojava-ipmi-kvm:v$(PACKAGE_VERSION)-oraclejre-8"; \
 	    fi; \

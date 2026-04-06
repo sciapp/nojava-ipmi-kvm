@@ -1,0 +1,2 @@
+deb [trusted=yes] http://archive.debian.org/debian jessie main
+deb [trusted=yes] http://archive.debian.org/debian-security jessie/updates main

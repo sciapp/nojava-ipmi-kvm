@@ -192,7 +192,7 @@ Oracle Java image yourself:
    ```
 
 2. Visit [the Java download page](https://www.java.com/en/download/manual.jsp) and get the *Linux x64* tar archive of
-   Oracle Java version `8u251`. Save it to the `docker` subdirectory of the previously cloned repository as
+   Oracle Java version `8u251`. Save it to the `docker/data` subdirectory of the previously cloned repository as
    `jre-8u251-linux-x64.tar.gz`. If you would like to also use Oracle Java 7, get `jre-7u80-linux-x64.tar.gz` from
    [Oracle's Java archive](https://www.oracle.com/java/technologies/javase/javase7-archive-downloads.html) (this
    requires an free Oracle account).
