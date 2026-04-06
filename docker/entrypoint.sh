@@ -1,6 +1,9 @@
 #!/bin/bash
 
-read -r -s PASSWD
+if [[ ! -v PASSWD ]]; then
+   read -r -s PASSWD
+fi
+
 echo "${PASSWD}" | /usr/local/bin/get_java_viewer -o /tmp/launch.jnlp "$@"
 return_code="$?"
 if [[ "${return_code}" -ne 0 ]]; then

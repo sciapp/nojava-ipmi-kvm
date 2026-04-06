@@ -21,6 +21,7 @@ import requests
 import urllib.parse
 import sys
 import json
+from requests_file import FileAdapter
 
 try:
     from typing import Any, Dict, Optional, Text  # noqa: F401  # pylint: disable=unused-import
@@ -259,6 +260,7 @@ def get_java_viewer(
     base_url = "https://{}".format(hostname)
     download_url = urllib.parse.urljoin(base_url, download_endpoint)
     session = requests.Session()
+    session.mount("file://", FileAdapter())
 
     def do_login(session_cookie_key):
         # type: (Optional[Text]) -> None
@@ -296,6 +298,9 @@ def get_java_viewer(
     if session_only:
         print(json.dumps({"cookies": session.cookies.get_dict(), "headers": dict(session.headers)}))
         return
+
+    if download_endpoint.startswith('file://'):
+        download_url = download_endpoint
 
     # Download the kvm viewer with the previous created session
     response = session.get(download_url, verify=ssl_verify)
