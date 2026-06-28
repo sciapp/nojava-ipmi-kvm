@@ -240,6 +240,16 @@ zplug install
 
 Clone this repository and source `nojava_ipmi_kvm_completion.plugin.zsh` in your `.zshrc`.
 
+## ASUS / AMI BMC without DNS hostname
+
+Some ASUS ASMB8 and similar BMCs return an invalid JNLP when the BMC has no DNS name. Use `EXTRNIP` in `download_endpoint`:
+
+```yaml
+download_endpoint: "Java/jviewer.jnlp?EXTRNIP=<bmc-ip>&JNLPSTR=JViewer"
+```
+
+Replace `<bmc-ip>` with the address clients use to reach the BMC.
+
 ## Acknowledgement
 
 -   Special thanks to @mheuwes for adding the new YAML config file format and adding HTML5 support!
