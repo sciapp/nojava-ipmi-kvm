@@ -1,6 +1,11 @@
 FROM debian:stretch
 LABEL maintainer="Ingo Meyer <i.meyer@fz-juelich.de>"
 
+# Debian stretch is archived; keep apt working for CI and fresh builds.
+RUN sed -i 's|deb.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i 's|security.debian.org|archive.debian.org|g' /etc/apt/sources.list && \
+    sed -i '/stretch-updates/d' /etc/apt/sources.list
+
 # Install needed packages and Java dependencies (second `apt-get install` call)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools procps python-numpy \

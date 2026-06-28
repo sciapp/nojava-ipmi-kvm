@@ -234,6 +234,10 @@ def create_java_docker_args(host_config, login_password, selected_resolution):
         "-e",
         "KVM_HOSTNAME={}".format(host_config.full_hostname),
     ]
+    if host_config.allow_legacy_jar_signatures:
+        environment_variables.extend(["-e", "ALLOW_LEGACY_JAR_SIGNATURES=true"])
+    if host_config.allow_insecure_jnlp_certs:
+        environment_variables.extend(["-e", "ALLOW_INSECURE_JNLP_CERTS=true"])
     java_provider = "oraclejre" if host_config.java_version.endswith("-oracle") else "openjdk"
     java_major_version = host_config.java_version.split("u")[0]
 

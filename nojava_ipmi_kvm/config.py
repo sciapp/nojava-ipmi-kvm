@@ -108,13 +108,27 @@ class JavaHostConfig(HostConfig):
         download_endpoint="cgi/url_redirect.cgi?url_name=ikvm&url_type=jwsk",
         java_version="7u181",
         format_jnlp=False,
+        allow_legacy_jar_signatures=False,
+        allow_insecure_jnlp_certs=False,
         **kwargs,
     ):
-        # type: (Text, Text, Text, Text, bool, **Any) -> None
+        # type: (Text, Text, Text, Text, bool, bool, bool, **Any) -> None
         super().__init__(short_hostname, full_hostname, **kwargs)
         self._download_endpoint = download_endpoint
         self._java_version = java_version
         self._format_jnlp = format_jnlp
+        self._allow_legacy_jar_signatures = allow_legacy_jar_signatures
+        self._allow_insecure_jnlp_certs = allow_insecure_jnlp_certs
+
+    @property
+    def allow_legacy_jar_signatures(self):
+        # type: () -> bool
+        return self._allow_legacy_jar_signatures
+
+    @property
+    def allow_insecure_jnlp_certs(self):
+        # type: () -> bool
+        return self._allow_insecure_jnlp_certs
 
     @property
     def download_endpoint(self):
