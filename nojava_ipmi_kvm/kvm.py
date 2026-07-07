@@ -16,6 +16,7 @@ except ImportError:
 
 from .utils import generate_temp_password
 from .config import config, HostConfig, HTML5HostConfig, JavaHostConfig
+from .stale_children import cleanup_stale_kvm_children
 from ._version import __version__
 
 logger = logging.getLogger(__name__)
@@ -130,9 +131,18 @@ class HTML5KvmViewer(KvmViewer):
 
 
 def log_factory(additional_logging):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+
     def log(msg, *args, **kwargs):
         logger.info(msg, *args, **kwargs)
-        if additional_logging is not None:
+        if additional_logging is None:
+            return
+        if loop is not None:
+            loop.call_soon_threadsafe(additional_logging, msg, *args, **kwargs)
+        else:
             additional_logging(msg, *args, **kwargs)
 
     return log
@@ -143,6 +153,12 @@ def add_sudo_if_configured(command_list):
     if config.run_docker_with_sudo:
         command_list.insert(0, "sudo")
     return command_list
+
+
+async def _run_blocking(func):
+    # type: (Callable[[], Any]) -> Any
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, func)
 
 
 async def check_webserver(log, url):
@@ -161,25 +177,40 @@ async def check_docker(log, subprocess_output):
     # type: (Callable, Optional[int]) -> None
     if not is_command_available("docker"):
         raise DockerNotInstalledError("Could not find the `docker` command. Please install Docker first.")
-    if (
-        subprocess.call(add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output)
-        != 0
-    ):
+
+    def docker_ps():
+        # type: () -> int
+        return subprocess.call(
+            add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output
+        )
+
+    if await _run_blocking(docker_ps) != 0:
         if running_macos():
-            subprocess.check_call(["open", "-g", "-a", "Docker"])
+
+            def open_docker():
+                subprocess.check_call(["open", "-g", "-a", "Docker"])
+
+            await _run_blocking(open_docker)
             log("Waiting for the Docker engine to be ready...")
-            while (
-                subprocess.call(
-                    add_sudo_if_configured(["docker", "ps"]), stdout=subprocess_output, stderr=subprocess_output
-                )
-                != 0
-            ):
+            while await _run_blocking(docker_ps) != 0:
                 await asyncio.sleep(1)
         else:
             raise DockerNotCallableError(
                 "`docker` cannot be called. If `docker` needs `sudo`, please set `run_docker_with_sudo = True`"
                 " in your `~/.nojava-ipmi-kvmrc`."
             )
+
+
+def docker_terminated_message(return_code, docker_port=None):
+    # type: (int, Optional[int]) -> Text
+    message = "Docker terminated with return code {}.".format(return_code)
+    if return_code == 125:
+        port_hint = docker_port if docker_port is not None else "N"
+        message += (
+            " Stale KVM container may be holding port {}. "
+            "Retry or remove nojava-ipmi-kvmrc-* manually.".format(port_hint)
+        )
+    return message
 
 
 def create_extra_args(host_config):
@@ -234,6 +265,10 @@ def create_java_docker_args(host_config, login_password, selected_resolution):
         "-e",
         "KVM_HOSTNAME={}".format(host_config.full_hostname),
     ]
+    if host_config.allow_legacy_jar_signatures:
+        environment_variables.extend(["-e", "ALLOW_LEGACY_JAR_SIGNATURES=true"])
+    if host_config.allow_insecure_jnlp_certs:
+        environment_variables.extend(["-e", "ALLOW_INSECURE_JNLP_CERTS=true"])
     java_provider = "oraclejre" if host_config.java_version.endswith("-oracle") else "openjdk"
     java_major_version = host_config.java_version.split("u")[0]
 
@@ -287,6 +322,14 @@ async def start_kvm_container(
     await check_webserver(log, "http://{}/".format(host_config.full_hostname))
     await check_docker(log, subprocess_output)
 
+    port_start = int(os.environ.get("WEB_PORT_START", 8800))
+    port_end = int(os.environ.get("WEB_PORT_END", 8900))
+
+    def run_cleanup():
+        cleanup_stale_kvm_children(port_start, port_end, log=log)
+
+    await _run_blocking(run_cleanup)
+
     # TODO: pass variables as `extra_args` (?)
     DOCKER_CONTAINER_NAME = "nojava-ipmi-kvmrc-{}".format(uuid.uuid4())
 
@@ -300,25 +343,30 @@ async def start_kvm_container(
         )
 
     log("Starting the Docker container...")
-    docker_process = subprocess.Popen(
-        add_sudo_if_configured(
-            ["docker", "run", "-i", "-v", "/etc/hosts:/etc/hosts:ro", "--rm", "--name", DOCKER_CONTAINER_NAME]
+
+    def launch_docker():
+        # type: () -> subprocess.Popen
+        docker_process = subprocess.Popen(
+            add_sudo_if_configured(
+                ["docker", "run", "-i", "-v", "/etc/hosts:/etc/hosts:ro", "--rm", "--name", DOCKER_CONTAINER_NAME]
+            )
+            + environment_variables
+            + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port)])
+            + [docker_image]
+            + extra_args,
+            stdin=subprocess.PIPE,
+            stdout=subprocess_output,
+            stderr=subprocess_output,
         )
-        + environment_variables
-        + (["-P"] if docker_port is None else ["-p", "{}:8080".format(docker_port)])
-        + [docker_image]
-        + extra_args,
-        stdin=subprocess.PIPE,
-        stdout=subprocess_output,
-        stderr=subprocess_output,
-    )
-    if docker_process.stdin is not None:
-        docker_process.stdin.write("{}\n".format(stdin).encode("utf-8"))
-        docker_process.stdin.flush()
-        docker_process.stdin.close()
-    else:
-        # This case cannot happen (`if` is used to satisfy mypy)
-        raise IOError("Something strange happened: Docker stdin not available.")
+        if docker_process.stdin is not None:
+            docker_process.stdin.write("{}\n".format(stdin).encode("utf-8"))
+            docker_process.stdin.flush()
+            docker_process.stdin.close()
+        else:
+            raise IOError("Something strange happened: Docker stdin not available.")
+        return docker_process
+
+    docker_process = await _run_blocking(launch_docker)
 
     def terminate_docker():
         # type: () -> None
@@ -333,18 +381,21 @@ async def start_kvm_container(
 
     while True:
         try:
-            if docker_process.poll() is not None:
-                raise DockerTerminatedError("Docker terminated with return code {}.".format(docker_process.returncode))
-            web_port = int(
-                subprocess.check_output(
+            poll_result = await _run_blocking(docker_process.poll)
+            if poll_result is not None:
+                raise DockerTerminatedError(docker_terminated_message(docker_process.returncode, docker_port))
+
+            def read_web_port():
+                # type: () -> int
+                port_output = subprocess.check_output(
                     add_sudo_if_configured(["docker", "port", DOCKER_CONTAINER_NAME]), stderr=subprocess_output
                 )
-                .strip()
-                .split(b"\n")[0].split(b":")[1]
-            )
+                return int(port_output.strip().split(b"\n")[0].split(b":")[1])
+
+            web_port = await _run_blocking(read_web_port)
             break
         except (IndexError, ValueError):
-            terminate_docker()
+            await _run_blocking(terminate_docker)
             raise DockerPortNotReadableError("Cannot read the VNC web port.")
         except subprocess.CalledProcessError:
             await asyncio.sleep(1)
@@ -365,19 +416,17 @@ async def start_kvm_container(
             response.raise_for_status()
             break
         except (requests.ConnectionError, requests.HTTPError):
-            if docker_process.poll() is not None:
+            poll_result = await _run_blocking(docker_process.poll)
+            if poll_result is not None:
                 if not host_config.skip_login:
                     raise DockerTerminatedError(
-                        "Docker terminated with return code {}. Maybe you entered a wrong password?".format(
-                            docker_process.returncode
-                        )
+                        docker_terminated_message(docker_process.returncode, docker_port)
+                        + " Maybe you entered a wrong password?"
                     )
                 else:
                     raise DockerTerminatedError(
-                        (
-                            "Docker terminated with return code {}."
-                            + " Maybe you configured a wrong download endpoint or need a login?"
-                        ).format(docker_process.returncode)
+                        docker_terminated_message(docker_process.returncode, docker_port)
+                        + " Maybe you configured a wrong download endpoint or need a login?"
                     )
             await asyncio.sleep(1)
 

@@ -50,6 +50,8 @@ __license__ = "MIT"
 __version_info__ = (0, 1, 0)
 __version__ = ".".join(map(str, __version_info__))
 
+SESSION_COOKIE_FAILURE_RE = re.compile(r"(?i)failure|failed|invalid|expired")
+
 
 DEFAULTS = {
     "attribute_names": {"user": "name", "password": "pwd"},
@@ -282,10 +284,15 @@ def get_java_viewer(
                     if session_cookie_key is None:
                         session_cookie_key = match_obj.group(1)
                     session_cookie_value = match_obj.group(2)
+                    if SESSION_COOKIE_FAILURE_RE.search(session_cookie_value):
+                        raise LoginFailedError("Login to {} was not successful.".format(login_url))
                     session.cookies.set(session_cookie_key, session_cookie_value)
                     break
         if response.status_code != 200 or not session.cookies:
             raise LoginFailedError("Login to {} was not successful.".format(login_url))
+        for cookie_value in session.cookies.values():
+            if SESSION_COOKIE_FAILURE_RE.search(cookie_value):
+                raise LoginFailedError("Login to {} was not successful.".format(login_url))
         session.headers.update({"referer": login_url})  # Some kvms expect the referer header to be present.
         logging.info("Logged in to {} as {}".format(hostname, user))
 
@@ -303,6 +310,11 @@ def get_java_viewer(
         raise DownloadFailedError("Downloading the ipmi kvm viewer file from {} failed.".format(download_url))
     logging.info("Successfully downloaded the kvm viewer.")
     jnlp_filecontent = response.text
+    jnlp_stripped = jnlp_filecontent.lstrip()
+    if not jnlp_stripped.startswith(("<?xml", "<jnlp")):
+        raise DownloadFailedError(
+            "Downloaded KVM viewer is not a JNLP file (login or session may have expired)."
+        )
     if format_jnlp:
         jnlp_filecontent = jnlp_filecontent.format(
             base_url=base_url, session_key=session.cookies.get(session_cookie_key)

@@ -240,6 +240,35 @@ zplug install
 
 Clone this repository and source `nojava_ipmi_kvm_completion.plugin.zsh` in your `.zshrc`.
 
+## Legacy AMI firmware (opt-in)
+
+Some AMI MegaRAC BMCs (Supermicro X9/X10, ASUS ASMB8) ship `JViewer.jar` signed with legacy algorithms and HTTPS certificates that modern OpenJDK builds reject inside the KVM child container.
+
+Opt-in template flags (default **off**) pass environment variables to the ephemeral `sciapp/nojava-ipmi-kvm` child only:
+
+| YAML key | Child env | Effect |
+|---|---|---|
+| `allow_legacy_jar_signatures: true` | `ALLOW_LEGACY_JAR_SIGNATURES=true` | Allow MD5 in `jdk.jar.disabledAlgorithms` |
+| `allow_insecure_jnlp_certs: true` | `ALLOW_INSECURE_JNLP_CERTS=true` | IcedTea `deployment.security.itw.ignorecertissues` |
+| (manual) | `ALLOW_LEGACY_AMI_JARS=true` | Both flags in the child image |
+
+Example:
+
+```yaml
+templates:
+  ami-megarac-openjdk-8:
+    allow_legacy_jar_signatures: true
+    allow_insecure_jnlp_certs: true
+    download_endpoint: Java/jviewer.jnlp
+    java_version: 8u242
+```
+
+ASUS BMCs without a DNS hostname may need `EXTRNIP` in `download_endpoint`:
+
+```yaml
+download_endpoint: "Java/jviewer.jnlp?EXTRNIP=<bmc-ip>&JNLPSTR=JViewer"
+```
+
 ## Acknowledgement
 
 -   Special thanks to @mheuwes for adding the new YAML config file format and adding HTML5 support!
