@@ -1,6 +1,16 @@
 FROM debian:jessie
 LABEL maintainer="Ingo Meyer <i.meyer@fz-juelich.de>"
 
+# Jessie is EOL:
+# - repoint apt at the Debian archive repo (archive.debian.org)
+# - skip valid-until check (archived Release files have expired Valid-Until date)
+# - mark archive sources as trusted (default jessie signing key not trusted by apt)
+# - remove 'jessie-updates' (isn't available via archived repo)
+RUN printf '%s\n' \
+      'deb [check-valid-until=no trusted=yes] http://archive.debian.org/debian jessie main' \
+      'deb [check-valid-until=no trusted=yes] http://archive.debian.org/debian-security jessie/updates main' \
+      > /etc/apt/sources.list
+
 # Install needed packages and Java dependencies (second `apt-get install` call)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl eterm fluxbox net-tools procps python-numpy \
