@@ -142,6 +142,55 @@ general:
 
 Unless you want to use custom docker images, you can omit the config keys `java_docker_image` and `html5_docker_image`.
 
+### Supermicro .cgi firmware (/cgi/login.cgi login)
+
+The `kvm-openjdk-7u51` template above targets the older AMI-style web interface,
+which logs in via `rpc/WEBSES/create.asp` using `WEBVAR_USERNAME` /
+`WEBVAR_PASSWORD` fields. Other Supermicro boards ship with a `.cgi` based
+interface whose login form posts to `/cgi/login.cgi` with `name` / `pwd` fields
+and serves the Java viewer through `url_redirect.cgi`. The default template will
+fail with these boards; use the following template instead:
+
+```yaml
+templates:
+  supermicro-cgi:
+    skip_login: False
+    login_user: ADMIN
+    login_endpoint: /cgi/login.cgi
+    allow_insecure_ssl: True
+    user_login_attribute_name: name
+    password_login_attribute_name: pwd
+    send_post_data_as_json: False
+    session_cookie_key: SID
+    download_endpoint: /cgi/url_redirect.cgi?url_name=ikvm&url_type=jwsk
+    java_version: 7u181
+    format_jnlp: True
+
+hosts:
+  mykvmhost:
+    based_on: supermicro-cgi
+    full_hostname: mykvmhost.example
+```
+
+Notes specific to this firmware:
+
+- `login_endpoint`, `user_login_attribute_name`, `password_login_attribute_name`
+  and `session_cookie_key` match the `.cgi` login form (`name`/`pwd`, session
+  cookie `SID`). You can confirm these for your own board by viewing the login
+  page source in a browser.
+- `allow_insecure_ssl: True` set because these BMCs use old self-signed certs
+  that won't validate.
+- `download_endpoint` uses `url_redirect.cgi` to fetch the iKVM `.jnlp`.
+- `format_jnlp: True` is required: the served `.jnlp` contains placeholders that
+  must be substituted, otherwise `javaws` fails with
+  "could not determine main class". `session_cookie_key` must be set when
+  `format_jnlp` is enabled.
+- `java_version` can be firmware-dependent. On the board this was tested against,
+  `7u51` failed to launch the viewer and `7u181` worked; if the console does not
+  appear, try `7u79` and `7u181` in turn.
+
+_Tested against a Supermicro A1SRi-2758F (ASPEED AST2400 BMC)._
+
 ### Using the command line tool
 
 After configuring, you can call `nojava-ipmi-kvm` from the command line:
